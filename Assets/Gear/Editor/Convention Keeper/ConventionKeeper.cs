@@ -7,7 +7,14 @@ using UnityEngine;
 
 namespace Gear.Tools.ConventionKeeper
 {
-    public enum ConventionState
+    public enum FolderConventionState
+    {
+        Valid,
+        Ignored,
+        NotValid
+    }
+
+    public enum FileConventionState
     {
         Valid,
         Ignored,
@@ -95,23 +102,38 @@ namespace Gear.Tools.ConventionKeeper
             {
                 EditorUtility.DisplayDialog("Folder Convention Errors!", folderErrors, "Ok");
             }
+            else
+            {
+                EditorUtility.DisplayDialog("Good!", "No convention errors so far!", "Ok");
+            }
         }
 
-        public static ConventionState CheckImportFileConvention(string filePath)
+        public static FileConventionState CheckImportFileConvention(string filePath)
         {
             FileData file = new FileData(filePath);
-            ConventionState result = CheckFolderConvention(file);
-            switch (result)
+            FolderConventionState folderState = CheckFolderConvention(file);
+            FileConventionState fileState = FileConventionState.NotValid;
+            switch (folderState)
             {
-                case ConventionState.Valid:
-                    result = CheckFileConvention(file);
+                case FolderConventionState.Valid:
+                    fileState = CheckFileConvention(file);
                     break;
-                case ConventionState.NotValid:
-                    EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.assetsFullPath + file.fullName + "\" is not following the convention.", "NHHEEEE");
-                    result = ConventionState.NotValid;
+                case FolderConventionState.NotValid:
+                    fileState = FileConventionState.NotValid;
                     break;
+            }      
+            
+            //Show warnings if any
+            if(folderState == FolderConventionState.NotValid)
+            {
+                EditorUtility.DisplayDialog("OOOOPS!", "The folder \"" + file.folderAssetsPath + "\" is not following the convention.", "Ok");
             }
-            return result;
+            else if (folderState == FolderConventionState.Valid && fileState == FileConventionState.NotValid)
+            {
+                EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not following the convention.", "Ok");
+            }
+
+            return fileState;
         }
 
         public static JSONObject GetKeyRules(string key)
@@ -124,7 +146,7 @@ namespace Gear.Tools.ConventionKeeper
             return rules;
         }
 
-        public static ConventionState CheckFileNameConvention(FileData file, List<JSONObject> conventions)
+        public static FileConventionState CheckFileNameConvention(FileData file, List<JSONObject> conventions)
         {
             foreach (JSONObject convention in conventions)
             {
@@ -140,19 +162,19 @@ namespace Gear.Tools.ConventionKeeper
                 }
                 if (Regex.Match(file.fullName, regexToMatch).Success)
                 {
-                    return ConventionState.Valid;
+                    return FileConventionState.Valid;
                 }
             }
-            return ConventionState.NotValid;
+            return FileConventionState.NotValid;
         }
 
-        public static ConventionState CheckFileConvention(FileData file)
+        public static FileConventionState CheckFileConvention(FileData file)
         {
-            ConventionState result = ConventionState.NotValid;
+            FileConventionState result = FileConventionState.NotValid;
             List<JSONObject> allowedFileTypes = folderDictionary[file.folderAssetsPath];
             if (ignoreFileTypes.Find((JSONObject x) => x.str == file.type) != null)
             {
-                result = ConventionState.Ignored;
+                result = FileConventionState.Ignored;
             }
             else if (allowedFileTypes.Find((JSONObject x) => x.str == file.type) != null)
             {
@@ -178,16 +200,16 @@ namespace Gear.Tools.ConventionKeeper
             return false;
         }
 
-        public static ConventionState CheckFolderConvention(FileData file)
+        public static FolderConventionState CheckFolderConvention(FileData file)
         {
-            ConventionState result = ConventionState.NotValid;
+            FolderConventionState result = FolderConventionState.NotValid;
             if (CheckIgnoreFolder(file.folderAssetsPath))
             {
-                result = ConventionState.Ignored;
+                result = FolderConventionState.Ignored;
             }
             else if (folderDictionary.ContainsKey(file.folderAssetsPath))
             {
-                result = ConventionState.Valid;
+                result = FolderConventionState.Valid;
             }
             return result;
         }
@@ -200,20 +222,20 @@ namespace Gear.Tools.ConventionKeeper
                 List<FileData> assetList = GetAllFilesDataAtPath(path);
                 if (allowedFileTypes != null && assetList.Count > 0)
                 {
-                    string localErrorMessage2 = string.Empty;
+                    string localErrorMessage = string.Empty;
                     foreach (FileData asset in assetList)
                     {
-                        ConventionState conventionState = CheckFileConvention(asset);
-                        if (conventionState == ConventionState.NotValid)
+                        FileConventionState conventionState = CheckFileConvention(asset);
+                        if (conventionState == FileConventionState.NotValid)
                         {
-                            localErrorMessage2 = localErrorMessage2 + "\n- " + asset.fullName + " does not meet the Convention criteria";
+                            localErrorMessage = localErrorMessage + "\n- " + asset.fullName + " does not meet the Convention criteria";
                         }
                     }
-                    if (localErrorMessage2 != string.Empty)
+                    if (localErrorMessage != string.Empty)
                     {
-                        string msg = localErrorMessage2;
-                        localErrorMessage2 = "\nPath \"" + path + "\" issues:" + msg + "\n";
-                        AddFolderError(localErrorMessage2);
+                        string msg = localErrorMessage;
+                        localErrorMessage = "\nPath \"" + path + "\" issues:" + msg + "\n";
+                        AddFolderError(localErrorMessage);
                     }
                 }
                 else if (allowedFileTypes == null && assetList.Count > 0)
@@ -263,6 +285,7 @@ namespace Gear.Tools.ConventionKeeper
                 regexDictionary.Clear();
                 active = false;
             }
+
             Object configFileData = AssetDatabase.LoadAssetAtPath("Assets/Gear/Config Files/ConventionKeeperConfig.json", typeof(Object));
             config.Clear();
             config = new JSONObject(configFileData.ToString());
