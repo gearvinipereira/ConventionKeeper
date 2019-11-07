@@ -19,18 +19,24 @@ namespace Gear.Tools.ConventionKeeper
         public string name;
         public string fullName;
         public string type;
-        public string assetsPath;
+        public string assetsFullPath;
+        public string folderAssetsPath;
 
         public FileData(string fullFilePath)
         {
             name = Path.GetFileNameWithoutExtension(fullFilePath);
             fullName = Path.GetFileName(fullFilePath);
-            type = Path.GetExtension(fullFilePath).Remove(0, 1);
-            assetsPath = fullFilePath.Remove(0, fullFilePath.IndexOf("Assets"));
+
+            string extension = Path.GetExtension(fullFilePath);
+            type = (extension != string.Empty) ? extension.Remove(0, 1) : "folder";
+            assetsFullPath = fullFilePath.Remove(0, fullFilePath.IndexOf("Assets"));
+
             if (fullFilePath.Contains("\\"))
             {
-                assetsPath = assetsPath.Remove(assetsPath.IndexOf("\\"));
+                assetsFullPath = assetsFullPath.Replace("\\", "/");
             }
+
+            folderAssetsPath = assetsFullPath.Remove(assetsFullPath.IndexOf("/" + name));
         }
     }
 
@@ -45,7 +51,7 @@ namespace Gear.Tools.ConventionKeeper
 
         private static Dictionary<string, List<JSONObject>> folderDictionary;
 
-        private static List<JSONObject> ignoreFolders;
+        private static List<string> ignoreFolders;
 
         private static List<JSONObject> ignoreFileTypes;
 
@@ -66,7 +72,7 @@ namespace Gear.Tools.ConventionKeeper
             config = new JSONObject();
             folderStructure = new JSONObject();
             folderDictionary = new Dictionary<string, List<JSONObject>>();
-            ignoreFolders = new List<JSONObject>();
+            ignoreFolders = new List<string>();
             ignoreFileTypes = new List<JSONObject>();
             namingConvention = new JSONObject();
             fileTypes = new List<JSONObject>();
@@ -94,14 +100,14 @@ namespace Gear.Tools.ConventionKeeper
         public static ConventionState CheckImportFileConvention(string filePath)
         {
             FileData file = new FileData(filePath);
-            ConventionState result = ConventionState.NotValid;
-            switch (CheckFolderConvention(file))
+            ConventionState result = CheckFolderConvention(file);
+            switch (result)
             {
                 case ConventionState.Valid:
                     result = CheckFileConvention(file);
                     break;
                 case ConventionState.NotValid:
-                    EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" was not imported on a conventioned folder: \n" + file.assetsPath, "NHHEEEE");
+                    EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.assetsFullPath + file.fullName + "\" is not following the convention.", "NHHEEEE");
                     result = ConventionState.NotValid;
                     break;
             }
@@ -143,7 +149,7 @@ namespace Gear.Tools.ConventionKeeper
         public static ConventionState CheckFileConvention(FileData file)
         {
             ConventionState result = ConventionState.NotValid;
-            List<JSONObject> allowedFileTypes = folderDictionary[file.assetsPath];
+            List<JSONObject> allowedFileTypes = folderDictionary[file.folderAssetsPath];
             if (ignoreFileTypes.Find((JSONObject x) => x.str == file.type) != null)
             {
                 result = ConventionState.Ignored;
@@ -159,14 +165,27 @@ namespace Gear.Tools.ConventionKeeper
             return result;
         }
 
+        public static bool CheckIgnoreFolder(string path)
+        {
+            foreach (string ignoredPath in ignoreFolders)
+            {
+                if(path.Contains(ignoredPath))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static ConventionState CheckFolderConvention(FileData file)
         {
             ConventionState result = ConventionState.NotValid;
-            if (ignoreFolders.Find((JSONObject x) => x.str == file.assetsPath) != null)
+            if (CheckIgnoreFolder(file.folderAssetsPath))
             {
                 result = ConventionState.Ignored;
             }
-            else if (folderDictionary.ContainsKey(file.assetsPath))
+            else if (folderDictionary.ContainsKey(file.folderAssetsPath))
             {
                 result = ConventionState.Valid;
             }
@@ -222,7 +241,7 @@ namespace Gear.Tools.ConventionKeeper
                     }
                 }
             }
-            else if (ignoreFolders.Find((JSONObject x) => x.str == path) == null)
+            else if (ignoreFolders.Contains(path))
             {
                 AddFolderError("The path: " + path + " is not in the Convention File.");
             }
@@ -261,7 +280,12 @@ namespace Gear.Tools.ConventionKeeper
                     folderDictionary.Add(folder["path"].str, folder["fileTypesAllowed"].list);
                 }
             }
-            ignoreFolders = new List<JSONObject>(folderStructure["ignore"]["folders"].list);
+
+            foreach (JSONObject ignoredFolder in folderStructure["ignore"]["folders"].list)
+            {
+                ignoreFolders.Add(ignoredFolder.str);
+            }
+
             ignoreFileTypes = new List<JSONObject>(folderStructure["ignore"]["fileTypes"].list);
             namingConvention = config["namingConvention"];
             fileTypes = new List<JSONObject>(namingConvention["fileTypes"].list);

@@ -7,12 +7,12 @@ namespace Gear.Tools.ConventionKeeper
     {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-            foreach (string importedAsset in importedAssets)
+            foreach (string importedAsset in importedAssets) 
             {
-                Debug.Log(importedAsset);
-                ConventionState conventionState = ConventionKeeper.CheckImportFileConvention(importedAsset);
+                ConventionState conventionState = ConventionKeeper.CheckImportFileConvention(importedAsset); 
                 if (conventionState == ConventionState.NotValid)
                 {
+                    EditorUtility.DisplayDialog("Ops!", importedAsset + " is not a valid file.", "nhe");
                     //AssetDatabase.DeleteAsset(importedAsset);
                 }
             }
