@@ -1,0 +1,139 @@
+{
+  "active":false,
+  "folderStructure": {
+    "check":{
+      "folders": [
+		{
+		  "path": "Assets",
+          "fileTypesAllowed": ["folder"]
+		},
+		{
+		  "path": "Assets/Art",
+          "fileTypesAllowed": ["folder"]
+		},
+        {
+          "path": "Assets/Art/Models",
+          "fileTypesAllowed": ["obj","fbx","folder"]
+        },
+        {
+          "path": "Assets/Art/ParticleSystems",
+          "fileTypesAllowed": ["prefab"]
+        },
+        {
+          "path": "Assets/Art/Animation",
+          "fileTypesAllowed": ["anim","controller"]
+        },
+        {
+          "path": "Assets/Art/Materials",
+          "fileTypesAllowed": ["mat"]
+        },
+        {
+          "path": "Assets/Art/Shaders",
+          "fileTypesAllowed": ["shader"]
+        },
+        {
+          "path": "Assets/Art/Textures",
+          "fileTypesAllowed": ["jpg","png"]
+        },
+		{
+		  "path": "Assets/Scripts",
+		  "fileTypesAllowed": ["cs"]
+		}
+      ]
+    },
+    "ignore":{
+      "folders": [
+        "Assets/FortuneCookie",
+		"Assets/Gear"
+      ],
+      "fileTypes": [
+		"meta",
+		"ext"
+	  ]
+    }
+  },
+  "namingConvention": {
+    "fileTypes":[
+      {
+        "types": ["fbx","obj"],
+        "conventions": [
+          "{usage}_{modelName}.{extension}"
+        ]
+      },
+      {
+        "types": ["anim"],
+        "conventions": [
+          "{usage}_{animationName}_Anim.{extension}",
+          "{usage}_Anim_{animationName}.{extension}"
+        ]
+      },
+      {
+        "types": ["jpg","png"],
+        "conventions": [
+          "{usage}_{textureName}.{extension}"
+        ]
+      }
+    ],
+    "conventionKeyRules":[
+      {
+        "key":"{animationName}",
+        "rules": [
+		  "sufix(_Anim",
+		  "prefix(Anim_"
+        ]
+      },
+	  {
+        "key":"{extension}",
+        "rules": [
+          "exact(.",
+		  "is(jpg",
+		  "is(png",
+		  "is(shader",
+		  "is(prefab",
+		  "is(anim",
+		  "is(mat"
+        ]
+      },
+	  {
+        "key":"{usage}",
+        "rules": [
+          "sufix(_"
+        ]
+      },
+	  {
+	    "key":"{modelName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{textureName}",
+		"rules" : [
+			"text"
+		]
+	  }
+    ],
+	"regexDictionary":[
+	  {
+	    "function":"prefix",
+		"regex":"KEY\w+"
+	  },
+	  {
+	    "function":"sufix",
+		"regex":"\w+KEY"
+	  },
+	  {
+	    "function":"is",
+		"regex":"KEY"
+	  },
+	  {
+	    "function":"exact",
+		"regex":"KEY"
+	  },
+	  {
+	    "function":"text",
+		"regex":"\w+"
+	  }
+	]
+  }
+}
