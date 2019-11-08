@@ -434,7 +434,7 @@ namespace Gear.Tools.ConventionKeeper
                                 conventionList += item + "\n";
                             }
 
-                            DialogTwoOptions("The file \"" + asset.fullName + "\" does not match the convention criteria." +
+                            /*DialogTwoOptions("The file \"" + asset.fullName + "\" does not match the convention criteria." +
                                              "\n" +
                                              "\nOne of these conventions will help:" +
                                              "\n" +
@@ -445,7 +445,26 @@ namespace Gear.Tools.ConventionKeeper
                             "Delete it", delegate ()
                             {
                                 DeleteDialog(asset);
-                            });
+                            });*/
+
+                            DialogInputField("The file \"" + asset.fullName + "\" does not match the convention criteria." +
+                                             "\n" +
+                                             "\nOne of these conventions will help:" +
+                                             "\n" +
+                                             "\n" + conventionList,
+                            "Fix it", delegate (string newFileName)
+                            {
+                                string test = newFileName;
+                                AssetDatabase.RenameAsset(asset.assetsFullPath, newFileName);
+                                AssetDatabase.Refresh();
+                                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.assetsFullPath.Replace(asset.fullName, newFileName)));
+                            },
+                            "Delete it", delegate ()
+                            {
+                                DeleteDialog(asset);
+                            }, asset);
+
+                            
                         }
                     }
                     if (localErrorMessage != string.Empty)
@@ -599,7 +618,7 @@ namespace Gear.Tools.ConventionKeeper
 
         public static void DialogTwoOptions(string message, string ok, Action okCallback, string cancel, Action cancelCallback)
         {
-            ConventionKeeperPopup.Open(toolName + " " + toolVersion, message, new ButtonData(ok, okCallback), new ButtonData(cancel, cancelCallback), Mathf.RoundToInt(Screen.width * 0.5f), Mathf.RoundToInt(Screen.height * 0.5f));
+            ConventionKeeperPopup.Dialog(toolName + " " + toolVersion, message, new ButtonData(ok, okCallback), new ButtonData(cancel, cancelCallback));
             
             /*if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok, cancel))
             {
@@ -643,6 +662,11 @@ namespace Gear.Tools.ConventionKeeper
                         altCallback.Invoke();
                     break;
             }
+        }
+
+        public static void DialogInputField(string message, string ok, Action<string> okCallback, string cancel, Action cancelCallback, FileData file)
+        {
+            ConventionKeeperPopup.DialogWithInputField(toolName + " " + toolVersion, message, file.fullName, new ButtonData(ok, okCallback), new ButtonData(cancel, cancelCallback));
         }
 
         /// <summary>
