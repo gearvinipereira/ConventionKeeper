@@ -132,6 +132,9 @@ namespace Gear.Tools.ConventionKeeper
             Initialize();
         }
 
+        /// <summary>
+        /// Initializes the Convention Keeper Tool
+        /// </summary>
         public static void Initialize()
         {
             config = new JSONObject();
@@ -145,18 +148,6 @@ namespace Gear.Tools.ConventionKeeper
             regexDictionary = new Dictionary<string, string>();
             active = false;
             LoadConfigs();
-        }
-
-        public static bool CheckConventionKeeperState()
-        {
-            Object configFileData = AssetDatabase.LoadAssetAtPath("Assets/Gear/Config Files/ConventionKeeperConfig.json", typeof(Object));
-
-            config.Clear();
-            config = new JSONObject(configFileData.ToString());
-
-            active = config["active"].b;
-
-            return config["active"].b;
         }
 
         /// <summary>

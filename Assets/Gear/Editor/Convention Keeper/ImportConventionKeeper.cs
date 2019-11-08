@@ -8,8 +8,6 @@ namespace Gear.Tools.ConventionKeeper
         //Unity function to intervene into the import pipeline and process the modified files
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-            ConventionKeeper.CheckConventionKeeperState();
-
             if (ConventionKeeper.active)
             {
                 foreach (string importedAsset in importedAssets)
