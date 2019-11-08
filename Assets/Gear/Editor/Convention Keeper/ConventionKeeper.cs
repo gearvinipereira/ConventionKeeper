@@ -255,10 +255,10 @@ namespace Gear.Tools.ConventionKeeper
                 {
                     EditorUtility.DisplayDialog("Folder Convention Errors!", folderErrors, "Ok");
                 }
-                else
+                /*else
                 {
                     EditorUtility.DisplayDialog("Good!", "No convention errors so far!", "Ok");
-                }
+                }*/
             }
             else
             {
@@ -427,14 +427,24 @@ namespace Gear.Tools.ConventionKeeper
                         FileConventionState conventionState = CheckFileConvention(asset);
                         if (conventionState == FileConventionState.NotValid)
                         {
-                            //localErrorMessage = localErrorMessage + "\n- " + asset.fullName + " does not meet the Convention criteria";
+                            string conventionList = string.Empty;
 
-                            DialogTwoOptions("Seems like your file \"" + asset.fullName + "\" does not match the convention criteria.", "I will fix it", null, "Delete it", delegate ()
+                            foreach (string item in fileTypes[asset.type])
                             {
-                                DialogTwoOptions("Are you sure? This action is not undoable", "Yes", delegate ()
-                                {
-                                    AssetDatabase.DeleteAsset(asset.assetsFullPath);
-                                }, "No", null);
+                                conventionList += item + "\n";
+                            }
+
+                            DialogTwoOptions("The file \"" + asset.fullName + "\" does not match the convention criteria." +
+                                             "\n" +
+                                             "\nOne of these conventions will help:" +
+                                             "\n" +
+                                             "\n" + conventionList, "I will fix it", delegate()
+                            {
+                                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.assetsFullPath));
+                            },
+                            "Delete it", delegate ()
+                            {
+                                DeleteDialog(asset);
                             });
                         }
                     }
@@ -576,24 +586,31 @@ namespace Gear.Tools.ConventionKeeper
             return false;
         }
 
+        #region DIALOGS
+
         public static void Dialog(string message, string ok, Action okCallback)
         {
             if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok))
             {
-                okCallback.Invoke();
+                if (okCallback != null)
+                    okCallback.Invoke();
             }
         }
 
         public static void DialogTwoOptions(string message, string ok, Action okCallback, string cancel, Action cancelCallback)
         {
-            if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok, cancel))
+            ConventionKeeperPopup.Open(toolName + " " + toolVersion, message, new ButtonData(ok, okCallback), new ButtonData(cancel, cancelCallback), Mathf.RoundToInt(Screen.width * 0.5f), Mathf.RoundToInt(Screen.height * 0.5f));
+            
+            /*if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok, cancel))
             {
-                okCallback.Invoke();
+                if (okCallback != null)
+                    okCallback.Invoke();
             }
             else
             {
-                cancelCallback.Invoke();
-            }
+                if (cancelCallback != null)
+                    cancelCallback.Invoke();
+            }*/
         }
 
         /// <summary>
@@ -612,17 +629,35 @@ namespace Gear.Tools.ConventionKeeper
             {
                 //ok
                 case 0:
-                    okCallback.Invoke();
+                    if (okCallback != null)
+                        okCallback.Invoke();
                     break;
                 //cancel
                 case 1:
-                    cancelCallback.Invoke();
+                    if (cancelCallback != null)
+                        cancelCallback.Invoke();
                     break;
                 //alt
                 case 2:
-                    altCallback.Invoke();
+                    if (altCallback != null)
+                        altCallback.Invoke();
                     break;
             }
         }
+
+        /// <summary>
+        /// Delete dialog for deletion confirmation
+        /// </summary>
+        /// <param name="file">File to be deleted</param>
+        public static void DeleteDialog(FileData file)
+        {
+            DialogTwoOptions("Are you sure?\nThis action is not undoable!", "Yes", delegate ()
+            {
+                AssetDatabase.DeleteAsset(file.assetsFullPath);
+                AssetDatabase.Refresh();
+            }, "No", null);
+        }
+
+        #endregion
     }
 }
