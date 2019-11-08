@@ -28,6 +28,8 @@ namespace Gear.Tools.ConventionKeeper
     {
         Valid,
         Ignored,
+        WrongDirectory,
+        WrongFileName,
         NotValid
     }
 
@@ -296,9 +298,9 @@ namespace Gear.Tools.ConventionKeeper
             }
             else if (folderState == FolderConventionState.Valid && fileState == FileConventionState.NotValid)
             {
-                //EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not following the convention.", "Ok");
+                EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not following the convention.", "Ok");
 
-                FileNameChangeDialog(file);
+                //FileNameChangeDialog(file);
             }
 
             return fileState;
@@ -368,6 +370,9 @@ namespace Gear.Tools.ConventionKeeper
                     result = CheckFileNameConvention(file, typeConventions);
                 }
             }
+
+
+
             return result;
         }
 
