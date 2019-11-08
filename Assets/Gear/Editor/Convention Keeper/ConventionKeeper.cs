@@ -56,17 +56,17 @@ namespace Gear.Tools.ConventionKeeper
 
         private static JSONObject folderStructure;
 
-        private static Dictionary<string, List<JSONObject>> folderDictionary;
+        private static Dictionary<string, List<string>> folderDictionary;
 
         private static List<string> ignoreFolders;
 
-        private static List<JSONObject> ignoreFileTypes;
+        private static List<string> ignoreFileTypes;
 
         private static string folderErrors;
 
         private static JSONObject namingConvention;
 
-        private static List<JSONObject> fileTypes;
+        private static Dictionary<string, List<string>> fileTypes;
 
         private static List<JSONObject> conventionKeyRules;
 
@@ -78,11 +78,11 @@ namespace Gear.Tools.ConventionKeeper
         {
             config = new JSONObject();
             folderStructure = new JSONObject();
-            folderDictionary = new Dictionary<string, List<JSONObject>>();
+            folderDictionary = new Dictionary<string, List<string>>();
             ignoreFolders = new List<string>();
-            ignoreFileTypes = new List<JSONObject>();
+            ignoreFileTypes = new List<string>();
             namingConvention = new JSONObject();
-            fileTypes = new List<JSONObject>();
+            fileTypes = new Dictionary<string, List<string>>();
             conventionKeyRules = new List<JSONObject>();
             regexDictionary = new Dictionary<string, string>();
             active = true;
@@ -146,13 +146,13 @@ namespace Gear.Tools.ConventionKeeper
             return rules;
         }
 
-        public static FileConventionState CheckFileNameConvention(FileData file, List<JSONObject> conventions)
+        public static FileConventionState CheckFileNameConvention(FileData file, List<string> conventions)
         {
-            foreach (JSONObject convention in conventions)
+            foreach (string convention in conventions)
             {
                 Regex matchRegex = new Regex("\\{\\w+\\}", RegexOptions.Compiled);
                 string regexToMatch = string.Empty;
-                foreach (Match key in matchRegex.Matches(convention.str))
+                foreach (Match key in matchRegex.Matches(convention))
                 {
                     JSONObject rules = GetKeyRules(key.ToString());
                     if (!rules.IsNull)
@@ -171,17 +171,17 @@ namespace Gear.Tools.ConventionKeeper
         public static FileConventionState CheckFileConvention(FileData file)
         {
             FileConventionState result = FileConventionState.NotValid;
-            List<JSONObject> allowedFileTypes = folderDictionary[file.folderAssetsPath];
-            if (ignoreFileTypes.Find((JSONObject x) => x.str == file.type) != null)
+            List<string> allowedFileTypes = folderDictionary[file.folderAssetsPath];
+            if (ignoreFileTypes.Contains(file.type))
             {
                 result = FileConventionState.Ignored;
             }
-            else if (allowedFileTypes.Find((JSONObject x) => x.str == file.type) != null)
+            else if (allowedFileTypes.Contains(file.type))
             {
-                JSONObject typeConvention = fileTypes.Find((JSONObject x) => x["types"].list.Find((JSONObject y) => y.str == file.type));
-                if (typeConvention != null)
+                List<string> typeConventions = fileTypes[file.type];
+                if (typeConventions != null)
                 {
-                    result = CheckFileNameConvention(file, typeConvention["conventions"].list);
+                    result = CheckFileNameConvention(file, typeConventions);
                 }
             }
             return result;
@@ -216,9 +216,14 @@ namespace Gear.Tools.ConventionKeeper
 
         public static void ProcessSubFolders(string path)
         {
-            if (folderDictionary.ContainsKey(path))
+            if (ignoreFolders.Contains(path))
             {
-                List<JSONObject> allowedFileTypes = folderDictionary[path];
+                //Do nothing, ignore them :)
+                return;
+            }
+            else if (folderDictionary.ContainsKey(path))
+            {
+                List<string> allowedFileTypes = folderDictionary[path];
                 List<FileData> assetList = GetAllFilesDataAtPath(path);
                 if (allowedFileTypes != null && assetList.Count > 0)
                 {
@@ -247,7 +252,7 @@ namespace Gear.Tools.ConventionKeeper
                     return;
                 }
                 List<string> subFolders = new List<string>(AssetDatabase.GetSubFolders(path));
-                if (allowedFileTypes.Find((JSONObject x) => x.str == "folder") != null)
+                if (allowedFileTypes.Contains("folder"))
                 {
                     for (int i = 0; i < subFolders.Count; i++)
                     {
@@ -262,10 +267,6 @@ namespace Gear.Tools.ConventionKeeper
                         AddFolderError(item);
                     }
                 }
-            }
-            else if (ignoreFolders.Contains(path))
-            {
-                AddFolderError("The path: " + path + " is not in the Convention File.");
             }
         }
 
@@ -300,7 +301,14 @@ namespace Gear.Tools.ConventionKeeper
             {
                 if (!folderDictionary.ContainsKey(folder["path"].str))
                 {
-                    folderDictionary.Add(folder["path"].str, folder["fileTypesAllowed"].list);
+                    List<string> types = new List<string>();
+
+                    foreach (JSONObject type in folder["fileTypesAllowed"].list)
+                    {
+                        types.Add(type.str);
+                    }
+
+                    folderDictionary.Add(folder["path"].str, types);
                 }
             }
 
@@ -309,9 +317,30 @@ namespace Gear.Tools.ConventionKeeper
                 ignoreFolders.Add(ignoredFolder.str);
             }
 
-            ignoreFileTypes = new List<JSONObject>(folderStructure["ignore"]["fileTypes"].list);
+            ignoreFileTypes = new List<string>();
+            foreach (JSONObject ignoredFileType in folderStructure["ignore"]["fileTypes"].list)
+            {
+                ignoreFileTypes.Add(ignoredFileType.str);
+            }
+
             namingConvention = config["namingConvention"];
-            fileTypes = new List<JSONObject>(namingConvention["fileTypes"].list);
+            //fileTypes = new List<JSONObject>(namingConvention["fileTypes"].list);
+            foreach (JSONObject item in namingConvention["fileTypes"].list)
+            {
+                //Load Conventions
+                List<string> conventions = new List<string>();
+                foreach (JSONObject convention in item["conventions"].list)
+                {
+                    conventions.Add(convention.str);
+                }
+
+                //Load Types
+                foreach (JSONObject type in item["types"].list)
+                {
+                    fileTypes.Add(type.str, conventions);
+                }
+            }
+
             conventionKeyRules = new List<JSONObject>(namingConvention["conventionKeyRules"].list);
             foreach (JSONObject item in namingConvention["regexDictionary"].list)
             {
@@ -327,9 +356,9 @@ namespace Gear.Tools.ConventionKeeper
         public static List<FileData> GetAllFilesDataAtPath(string path)
         {
             List<string> fileEntries = new List<string>(Directory.GetFiles(Application.dataPath + path.Remove(0, 6)));
-            foreach (JSONObject type in ignoreFileTypes)
+            foreach (string type in ignoreFileTypes)
             {
-                fileEntries.RemoveAll((string x) => x.Contains("." + type.str));
+                fileEntries.RemoveAll((string x) => x.Contains("." + type));
             }
             List<FileData> tmpFileDataList = new List<FileData>();
             foreach (string filePath in fileEntries)

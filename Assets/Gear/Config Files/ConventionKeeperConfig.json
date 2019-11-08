@@ -97,7 +97,8 @@
 		  "is(shader",
 		  "is(prefab",
 		  "is(anim",
-		  "is(mat"
+		  "is(mat",
+		  "is(controller" 
         ]
       },
 	  {
