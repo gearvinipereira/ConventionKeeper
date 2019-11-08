@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
+using System;
 
 namespace Gear.Tools.ConventionKeeper
 {
@@ -69,6 +70,10 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         private const string configFilePath = "Assets/Gear/Config Files/ConventionKeeperConfig.json";
 
+        private const string toolName = "Convention Keeper";
+
+        private const string toolVersion = "v0.1";
+
         /// <summary>
         /// Holds the configuration JSON file data
         /// </summary>
@@ -123,7 +128,7 @@ namespace Gear.Tools.ConventionKeeper
         /// Holds the state of the current tool, it might be deactivated
         /// </summary>
         public static bool active;
-        
+
         /// <summary>
         /// Function called once when unity opens
         /// </summary>
@@ -170,7 +175,7 @@ namespace Gear.Tools.ConventionKeeper
                 active = false;
             }
 
-            Object configFileData = AssetDatabase.LoadAssetAtPath("Assets/Gear/Config Files/ConventionKeeperConfig.json", typeof(Object));
+            UnityEngine.Object configFileData = AssetDatabase.LoadAssetAtPath("Assets/Gear/Config Files/ConventionKeeperConfig.json", typeof(UnityEngine.Object));
 
             config.Clear();
             config = new JSONObject(configFileData.ToString());
@@ -239,7 +244,7 @@ namespace Gear.Tools.ConventionKeeper
         [MenuItem("Gear/Convention Checker/Check Convention", priority = 0)]
         public static void RunConventionCheck()
         {
-            if (active) 
+            if (active)
             {
                 LoadConfigs();
 
@@ -422,7 +427,15 @@ namespace Gear.Tools.ConventionKeeper
                         FileConventionState conventionState = CheckFileConvention(asset);
                         if (conventionState == FileConventionState.NotValid)
                         {
-                            localErrorMessage = localErrorMessage + "\n- " + asset.fullName + " does not meet the Convention criteria";
+                            //localErrorMessage = localErrorMessage + "\n- " + asset.fullName + " does not meet the Convention criteria";
+
+                            DialogTwoOptions("Seems like your file \"" + asset.fullName + "\" does not match the convention criteria.", "I will fix it", null, "Delete it", delegate ()
+                            {
+                                DialogTwoOptions("Are you sure? This action is not undoable", "Yes", delegate ()
+                                {
+                                    AssetDatabase.DeleteAsset(asset.assetsFullPath);
+                                }, "No", null);
+                            });
                         }
                     }
                     if (localErrorMessage != string.Empty)
@@ -561,6 +574,55 @@ namespace Gear.Tools.ConventionKeeper
                 return true;
             }
             return false;
+        }
+
+        public static void Dialog(string message, string ok, Action okCallback)
+        {
+            if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok))
+            {
+                okCallback.Invoke();
+            }
+        }
+
+        public static void DialogTwoOptions(string message, string ok, Action okCallback, string cancel, Action cancelCallback)
+        {
+            if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok, cancel))
+            {
+                okCallback.Invoke();
+            }
+            else
+            {
+                cancelCallback.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// Opens a dialog with 3 options
+        /// </summary>
+        /// <param name="message">The message to be shown</param>
+        /// <param name="ok">Ok button text</param>
+        /// <param name="okCallback">Ok button callback</param>
+        /// <param name="cancel">Cancel button text</param>
+        /// <param name="cancelCallback">Cancel button callback</param>
+        /// <param name="alt">Alt button text</param>
+        /// <param name="altCallback">Alt button callback</param>
+        public static void DialogThreeOptions(string message, string ok, Action okCallback, string cancel, Action cancelCallback, string alt, Action altCallback)
+        {
+            switch (EditorUtility.DisplayDialogComplex(toolName + " " + toolVersion, message, ok, cancel, alt))
+            {
+                //ok
+                case 0:
+                    okCallback.Invoke();
+                    break;
+                //cancel
+                case 1:
+                    cancelCallback.Invoke();
+                    break;
+                //alt
+                case 2:
+                    altCallback.Invoke();
+                    break;
+            }
         }
     }
 }
