@@ -290,11 +290,15 @@ namespace Gear.Tools.ConventionKeeper
             //Show warnings if any
             if (folderState == FolderConventionState.NotValid)
             {
-                EditorUtility.DisplayDialog("OOOOPS!", "The folder \"" + file.folderAssetsPath + "\" is not following the convention.", "Ok");
+                //EditorUtility.DisplayDialog("OOOOPS!", , "Ok");
+
+                Dialog("The folder \"" + file.folderAssetsPath + "\" is not following the convention.", "Ok", null);
             }
             else if (folderState == FolderConventionState.Valid && fileState == FileConventionState.NotValid)
             {
-                EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not following the convention.", "Ok");
+                //EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not following the convention.", "Ok");
+
+                FileNameChangeDialog(file);
             }
 
             return fileState;
@@ -427,44 +431,7 @@ namespace Gear.Tools.ConventionKeeper
                         FileConventionState conventionState = CheckFileConvention(asset);
                         if (conventionState == FileConventionState.NotValid)
                         {
-                            string conventionList = string.Empty;
-
-                            foreach (string item in fileTypes[asset.type])
-                            {
-                                conventionList += item + "\n";
-                            }
-
-                            /*DialogTwoOptions("The file \"" + asset.fullName + "\" does not match the convention criteria." +
-                                             "\n" +
-                                             "\nOne of these conventions will help:" +
-                                             "\n" +
-                                             "\n" + conventionList, "I will fix it", delegate()
-                            {
-                                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.assetsFullPath));
-                            },
-                            "Delete it", delegate ()
-                            {
-                                DeleteDialog(asset);
-                            });*/
-
-                            DialogInputField("The file \"" + asset.fullName + "\" does not match the convention criteria." +
-                                             "\n" +
-                                             "\nOne of these conventions will help:" +
-                                             "\n" +
-                                             "\n" + conventionList,
-                            "Fix it", delegate (string newFileName)
-                            {
-                                string test = newFileName;
-                                AssetDatabase.RenameAsset(asset.assetsFullPath, newFileName);
-                                AssetDatabase.Refresh();
-                                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.assetsFullPath.Replace(asset.fullName, newFileName)));
-                            },
-                            "Delete it", delegate ()
-                            {
-                                DeleteDialog(asset);
-                            }, asset);
-
-                            
+                            FileNameChangeDialog(asset);
                         }
                     }
                     if (localErrorMessage != string.Empty)
@@ -667,6 +634,33 @@ namespace Gear.Tools.ConventionKeeper
         public static void DialogInputField(string message, string ok, Action<string> okCallback, string cancel, Action cancelCallback, FileData file)
         {
             ConventionKeeperPopup.DialogWithInputField(toolName + " " + toolVersion, message, file.fullName, new ButtonData(ok, okCallback), new ButtonData(cancel, cancelCallback));
+        }
+
+        public static void FileNameChangeDialog(FileData asset)
+        {
+            string conventionList = string.Empty;
+
+            foreach (string item in fileTypes[asset.type])
+            {
+                conventionList += item + "\n";
+            }
+
+            DialogInputField("The file \"" + asset.fullName + "\" does not match the convention criteria." +
+                                             "\n" +
+                                             "\nOne of these conventions will help:" +
+                                             "\n" +
+                                             "\n" + conventionList,
+                            "Fix it", delegate (string newFileName)
+                            {
+                                string test = newFileName;
+                                AssetDatabase.RenameAsset(asset.assetsFullPath, newFileName);
+                                AssetDatabase.Refresh();
+                                EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.assetsFullPath.Replace(asset.fullName, newFileName)));
+                            },
+                            "Delete it", delegate ()
+                            {
+                                DeleteDialog(asset);
+                            }, asset);
         }
 
         /// <summary>

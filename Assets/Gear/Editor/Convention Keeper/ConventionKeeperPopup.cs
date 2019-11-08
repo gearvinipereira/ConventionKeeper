@@ -148,10 +148,10 @@ namespace Gear.Tools.ConventionKeeper
 
         public void DrawDialogWithInputField()
         {
-            /*if (GUILayout.Button("X"))
+            if (GUILayout.Button("X"))
             {
                 this.Close();
-            }*/
+            }
 
             GUILayout.Label(this.title);
 
