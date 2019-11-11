@@ -240,6 +240,11 @@ namespace Gear.Tools.ConventionKeeper
             }
         }
 
+        public static void SaveConfigs()
+        {
+            Asset
+        }
+
         /// <summary>
         /// Manual call of the convention validation
         /// </summary>
@@ -257,10 +262,10 @@ namespace Gear.Tools.ConventionKeeper
                 {
                     EditorUtility.DisplayDialog("Folder Convention Errors!", folderErrors, "Ok");
                 }
-                /*else
+                else
                 {
-                    EditorUtility.DisplayDialog("Good!", "No convention errors so far!", "Ok");
-                }*/
+                    EditorUtility.DisplayDialog("Good!", "No convention errors!", "Ok");
+                }
             }
             else
             {
@@ -341,12 +346,14 @@ namespace Gear.Tools.ConventionKeeper
                         regexToMatch += BuildRuleRegex(rules);
                     }
                 }
+
                 if (Regex.Match(file.fullName, regexToMatch).Success)
                 {
                     return FileConventionState.Valid;
                 }
             }
-            return FileConventionState.NotValid;
+
+            return FileConventionState.WrongFileName;
         }
 
         /// <summary>
@@ -358,11 +365,14 @@ namespace Gear.Tools.ConventionKeeper
         {
             FileConventionState result = FileConventionState.NotValid;
             List<string> allowedFileTypes = folderDictionary[file.folderAssetsPath];
+
+            bool isAllowedFileType = allowedFileTypes.Contains(file.type);
+
             if (ignoreFileTypes.Contains(file.type))
             {
                 result = FileConventionState.Ignored;
             }
-            else if (allowedFileTypes.Contains(file.type))
+            else if (isAllowedFileType)
             {
                 List<string> typeConventions = fileTypes[file.type];
                 if (typeConventions != null)
@@ -370,8 +380,10 @@ namespace Gear.Tools.ConventionKeeper
                     result = CheckFileNameConvention(file, typeConventions);
                 }
             }
-
-
+            else
+            {
+                result = FileConventionState.NotValid;
+            }
 
             return result;
         }
@@ -410,6 +422,30 @@ namespace Gear.Tools.ConventionKeeper
             {
                 result = FolderConventionState.Valid;
             }
+            else
+            {
+                result = FolderConventionState.NotValid;
+            }
+
+            return result;
+        }
+
+        public static FolderConventionState CheckFolderConvention(string path)
+        {
+            FolderConventionState result = FolderConventionState.NotValid;
+            if (CheckIgnoreFolder(path))
+            {
+                result = FolderConventionState.Ignored;
+            }
+            else if (folderDictionary.ContainsKey(path))
+            {
+                result = FolderConventionState.Valid;
+            }
+            else
+            {
+                result = FolderConventionState.NotValid;
+            }
+
             return result;
         }
 
@@ -419,57 +455,109 @@ namespace Gear.Tools.ConventionKeeper
         /// <param name="path"></param>
         public static void ProcessSubFolders(string path)
         {
-            if (ignoreFolders.Contains(path))
+            FolderConventionState folderState = CheckFolderConvention(path);
+
+            switch (folderState)
             {
-                //Do nothing, ignore them :)
-                return;
-            }
-            else if (folderDictionary.ContainsKey(path))
-            {
-                List<string> allowedFileTypes = folderDictionary[path];
-                List<FileData> assetList = GetAllFilesDataAtPath(path);
-                if (allowedFileTypes != null && assetList.Count > 0)
-                {
-                    string localErrorMessage = string.Empty;
-                    foreach (FileData asset in assetList)
+                case FolderConventionState.Ignored:
+                    //Do nothing, ignore them :)
+                    return;
+                    break;
+
+                case FolderConventionState.Valid:
+                    List<string> allowedFileTypes = folderDictionary[path];
+
+                    if (allowedFileTypes == null)
                     {
-                        FileConventionState conventionState = CheckFileConvention(asset);
-                        if (conventionState == FileConventionState.NotValid)
+                        return;
+                    }
+
+                    List<FileData> assetList = GetAllFilesDataAtPath(path);
+
+                    if (allowedFileTypes != null && assetList.Count > 0)
+                    {
+                        string localErrorMessage = string.Empty;
+                        foreach (FileData asset in assetList)
                         {
-                            FileNameChangeDialog(asset);
+                            FileConventionState conventionState = CheckFileConvention(asset);
+
+                            switch (conventionState)
+                            {
+                                case FileConventionState.WrongFileName:
+                                    FileNameChangeDialog(asset);
+                                    break;
+                                case FileConventionState.NotValid:
+                                    Dialog("The file \"" + asset.fullName + "\" is not following the convention. \nWhat to do?",
+                                        "Add to Ignored File Types",
+                                        delegate ()
+                                        {
+                                            //TODO - Add option to write the file type into the ignored types of configuration file
+                                        },
+                                        "Delete It!",
+                                        delegate ()
+                                        {
+                                            DeleteDialog(asset);
+                                        });
+                                    break;
+                            }
                         }
                     }
-                    if (localErrorMessage != string.Empty)
+                    else if (allowedFileTypes == null && assetList.Count > 0)
                     {
-                        string msg = localErrorMessage;
-                        localErrorMessage = "\nPath \"" + path + "\" issues:" + msg + "\n";
-                        AddFolderError(localErrorMessage);
+                        Dialog("The path \"" + path + "\" has FILES which the TYPE IS NOT in the Convention, what to do?",
+                                "Add FILETYPE to this path",
+                                delegate ()
+                                {
+                                    //TODO - Add option to write the file type into a folder in the configuration file
+                                },
+                                "Delete wrong FILES",
+                                delegate ()
+                                {
+                                    //TODO - Delete files that are not in the allowed file types list
+                                });
                     }
-                }
-                else if (allowedFileTypes == null && assetList.Count > 0)
-                {
-                    AddFolderError("The path: " + path + " has FILES which the TYPE IS NOT in the Convention File.");
-                }
-                if (allowedFileTypes == null)
-                {
-                    return;
-                }
-                List<string> subFolders = new List<string>(AssetDatabase.GetSubFolders(path));
-                if (allowedFileTypes.Contains("folder"))
-                {
-                    for (int i = 0; i < subFolders.Count; i++)
+
+                    //Check sub folders if allowed
+                    List<string> subFolders = new List<string>(AssetDatabase.GetSubFolders(path));
+                    if (allowedFileTypes.Contains("folder"))
                     {
-                        ProcessSubFolders(subFolders[i]);
+                        for (int i = 0; i < subFolders.Count; i++)
+                        {
+                            ProcessSubFolders(subFolders[i]);
+                        }
                     }
-                }
-                else if (subFolders.Count > 0)
-                {
-                    AddFolderError("The path: " + path + " has FOLDERS that are NOT allowed in the Convention File:");
-                    foreach (string item in subFolders)
+                    else
                     {
-                        AddFolderError(item);
+                        if (subFolders.Count > 0)
+                        {
+                            Dialog("The path \"" + path + "\" does not allow FOLDERS and it contains " + subFolders.Count + " folders, what to do?",
+                                "Add FOLDERS to this path",
+                                delegate ()
+                                {
+                                    //TODO - Add option to write the file type into a folder in the configuration file
+                                },
+                                "Delete FOLDERS",
+                                delegate ()
+                                {
+                                    //TODO - Delete the list of sub folders
+                                });
+                        }
                     }
-                }
+                    break;
+
+                case FolderConventionState.NotValid:
+                    Dialog("The path \"" + path + "\" is not in the Convention, what to do?",
+                                "Add FOLDER to Convention",
+                                delegate ()
+                                {
+                                    //TODO - Add option to write the folder in the configuration file
+                                },
+                                "Delete FOLDER",
+                                delegate ()
+                                {
+                                    //TODO - Delete the folder
+                                });
+                    break;
             }
         }
 
@@ -477,7 +565,7 @@ namespace Gear.Tools.ConventionKeeper
         /// Adds error text to a cache to be shown at the end of the validation process - Debug puposes
         /// </summary>
         /// <param name="error">The error message to be added</param>
-        private static void AddFolderError(string error)
+        private static void AddError(string error)
         {
             folderErrors = folderErrors + "\n" + error;
         }
@@ -588,20 +676,9 @@ namespace Gear.Tools.ConventionKeeper
             }
         }
 
-        public static void DialogTwoOptions(string message, string ok, Action okCallback, string cancel, Action cancelCallback)
+        public static void Dialog(string message, string ok, Action okCallback, string cancel, Action cancelCallback)
         {
             ConventionKeeperPopup.Dialog(toolName + " " + toolVersion, message, new ButtonData(ok, okCallback), new ButtonData(cancel, cancelCallback));
-            
-            /*if (EditorUtility.DisplayDialog(toolName + " " + toolVersion, message, ok, cancel))
-            {
-                if (okCallback != null)
-                    okCallback.Invoke();
-            }
-            else
-            {
-                if (cancelCallback != null)
-                    cancelCallback.Invoke();
-            }*/
         }
 
         /// <summary>
@@ -614,7 +691,7 @@ namespace Gear.Tools.ConventionKeeper
         /// <param name="cancelCallback">Cancel button callback</param>
         /// <param name="alt">Alt button text</param>
         /// <param name="altCallback">Alt button callback</param>
-        public static void DialogThreeOptions(string message, string ok, Action okCallback, string cancel, Action cancelCallback, string alt, Action altCallback)
+        public static void Dialog(string message, string ok, Action okCallback, string cancel, Action cancelCallback, string alt, Action altCallback)
         {
             switch (EditorUtility.DisplayDialogComplex(toolName + " " + toolVersion, message, ok, cancel, alt))
             {
@@ -661,6 +738,8 @@ namespace Gear.Tools.ConventionKeeper
                                 AssetDatabase.RenameAsset(asset.assetsFullPath, newFileName);
                                 AssetDatabase.Refresh();
                                 EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(asset.assetsFullPath.Replace(asset.fullName, newFileName)));
+
+                                RecheckConventionDialog();
                             },
                             "Delete it", delegate ()
                             {
@@ -674,10 +753,20 @@ namespace Gear.Tools.ConventionKeeper
         /// <param name="file">File to be deleted</param>
         public static void DeleteDialog(FileData file)
         {
-            DialogTwoOptions("Are you sure?\nThis action is not undoable!", "Yes", delegate ()
+            Dialog("Are you sure?\nThis action is not undoable!", "Yes", delegate ()
             {
                 AssetDatabase.DeleteAsset(file.assetsFullPath);
                 AssetDatabase.Refresh();
+
+                RecheckConventionDialog();
+            }, "No", null);
+        }
+
+        public static void RecheckConventionDialog()
+        {
+            Dialog("Would you like to RECHECK the convetion?", "Yes :)", delegate ()
+            {
+                RunConventionCheck();
             }, "No", null);
         }
 
