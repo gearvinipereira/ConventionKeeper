@@ -92,6 +92,25 @@ namespace Gear.Tools.ConventionKeeper
             window.ShowPopup();
         }
 
+        public static void Dialog(string title, string message, List<ButtonData> buttonList, int width = 0, int height = 0)
+        {
+            ConventionKeeperPopup window = ScriptableObject.CreateInstance<ConventionKeeperPopup>();
+
+            width = (width == 0) ? Mathf.RoundToInt(Screen.currentResolution.width * 0.5f) : width;
+            height = (height == 0) ? Mathf.RoundToInt(Screen.currentResolution.height * 0.5f) : height;
+
+            window.position = new Rect(Screen.currentResolution.width / 2 - width / 2, Screen.currentResolution.height / 2 - height / 2, width, height);
+
+            window.title = title;
+            window.message = message;
+
+            window.buttonList = buttonList;
+
+            window.drawFunction = new Action(window.DrawDialog);
+
+            window.ShowPopup();
+        }
+
         public static void DialogWithInputField(string title, string message, string inputInitialText, ButtonData ok, ButtonData cancel, int width = 0, int height = 0)
         {
             ConventionKeeperPopup window = ScriptableObject.CreateInstance<ConventionKeeperPopup>();
@@ -116,6 +135,32 @@ namespace Gear.Tools.ConventionKeeper
             window.ShowPopup();
         }
 
+        public static void ConfigEditDialog()
+        {
+
+        }
+
+        public static void FirstTimeDialog(int width, int height)
+        {
+            ConventionKeeperPopup window = ScriptableObject.CreateInstance<ConventionKeeperPopup>();
+
+            width = (width == 0) ? Mathf.RoundToInt(Screen.currentResolution.width * 0.5f) : width;
+            height = (height == 0) ? Mathf.RoundToInt(Screen.currentResolution.height * 0.5f) : height;
+
+            window.position = new Rect(Screen.currentResolution.width / 2 - width / 2, Screen.currentResolution.height / 2 - height / 2, width, height);
+
+            window.title = "Hello!";
+            window.message = "We need to setup Convention Keeper to support your project needs!" +
+                             "\n" +
+                             "\nThe tool will make a series of questions regarding your project folders, answer wisely!";
+
+
+
+            window.drawFunction = new Action(window.DrawFirstTimeDialog);
+
+            window.ShowPopup();
+        }
+
         private void OnGUI()
         {
             this.drawFunction.Invoke();
@@ -123,10 +168,10 @@ namespace Gear.Tools.ConventionKeeper
 
         public void DrawDialog()
         {
-            /*if (GUILayout.Button("X"))
+            if (GUILayout.Button("X"))
             {
                 this.Close();
-            }*/
+            }
 
             GUILayout.Label(this.title);
 
@@ -185,6 +230,28 @@ namespace Gear.Tools.ConventionKeeper
                         }
                         this.Close();
                     }
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        public void DrawFirstTimeDialog()
+        {
+            if (GUILayout.Button("X"))
+            {
+                this.Close();
+            }
+
+            GUILayout.Label(this.title);
+
+            GUILayout.Label(this.message);
+
+            GUILayout.BeginHorizontal();
+            {
+                if (GUILayout.Button("START!"))
+                {
+                    this.Close();
+                    ConventionKeeper.SetupFirstTime();
                 }
             }
             GUILayout.EndHorizontal();

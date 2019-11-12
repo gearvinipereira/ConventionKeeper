@@ -1,0 +1,118 @@
+{
+  "active":true,
+  "folderStructure": {
+    "check":{
+      "folders": [
+		{
+		  "path": "Assets",
+          "fileTypesAllowed": ["folder"]
+		}
+      ]
+    },
+    "ignore":{
+      "folders": [
+		"Assets/Gear"
+      ],
+      "fileTypes": [
+		"meta"
+	  ]
+    }
+  },
+  "namingConvention": {
+    "fileTypes":[
+      {
+        "types": ["fbx","obj"],
+        "conventions": [
+          "{usage}_{modelName}.{extension}"
+        ]
+      },
+      {
+        "types": ["anim"],
+        "conventions": [
+          "{usage}_{animationName}_Anim.{extension}",
+          "{usage}_Anim_{animationName}.{extension}"
+        ]
+      },
+	  {
+        "types": ["controller"],
+        "conventions": [
+          "{usage}_{controllerName}.{extension}"
+        ]
+      },
+      {
+        "types": ["jpg","png"],
+        "conventions": [
+          "{usage}_{textureName}.{extension}"
+        ]
+      }
+    ],
+    "conventionKeyRules":[
+      {
+        "key":"{animationName}",
+        "rules": [
+		  "sufix(_Anim",
+		  "prefix(Anim_"
+        ]
+      },
+	  {
+        "key":"{extension}",
+        "rules": [
+          "exact(.",
+		  "is(jpg",
+		  "is(png",
+		  "is(shader",
+		  "is(prefab",
+		  "is(anim",
+		  "is(mat",
+		  "is(controller" 
+        ]
+      },
+	  {
+        "key":"{usage}",
+        "rules": [
+          "sufix(_"
+        ]
+      },
+	  {
+	    "key":"{modelName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{textureName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{controllerName}",
+		"rules" : [
+			"text"
+		]
+	  }
+    ],
+	"regexDictionary":[
+	  {
+	    "function":"prefix",
+		"regex":"KEY\w+"
+	  },
+	  {
+	    "function":"sufix",
+		"regex":"\w+KEY"
+	  },
+	  {
+	    "function":"is",
+		"regex":"KEY"
+	  },
+	  {
+	    "function":"exact",
+		"regex":"KEY"
+	  },
+	  {
+	    "function":"text",
+		"regex":"\w+"
+	  }
+	]
+  }
+}
