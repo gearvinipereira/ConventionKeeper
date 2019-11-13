@@ -44,7 +44,19 @@
         "conventions": [
           "{usage}_{textureName}.{extension}"
         ]
-      }
+      },
+	  {
+		"types": ["cs"],
+        "conventions": [
+          "{scriptName}.{extension}"
+        ]
+	  },
+	  {
+		"types": ["unity"],
+        "conventions": [
+          "{sceneName}.{extension}"
+        ]
+	  }
     ],
     "conventionKeyRules":[
       {
@@ -87,6 +99,18 @@
 	  },
 	  {
 	    "key":"{controllerName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{scriptName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{sceneName}",
 		"rules" : [
 			"text"
 		]

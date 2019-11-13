@@ -84,6 +84,8 @@ namespace Gear.Tools.ConventionKeeper
 
         private static string projectConfigFilePath = "Assets/Gear/Config Files/ConventionKeeper_{NAME}_Config.asset";
 
+        private const string autoRecheckKey = "AutoRecheckAfterDialog";
+
         private const string toolName = "Convention Keeper";
 
         private const string toolVersion = "v0.2";
@@ -91,27 +93,7 @@ namespace Gear.Tools.ConventionKeeper
         /// <summary>
         /// Holds the configuration JSON file data
         /// </summary>
-        private static JSONObject config;
-
-        /// <summary>
-        /// Holds the folder structure
-        /// </summary>
-        private static JSONObject folderStructure;
-
-        /// <summary>
-        /// Holds the folder dictionary
-        /// </summary>
-        private static Dictionary<string, List<string>> folderDictionary;
-
-        /// <summary>
-        /// Holds the folders to be ignores
-        /// </summary>
-        private static List<string> ignoreFolders;
-
-        /// <summary>
-        /// Holds the files to be ignored
-        /// </summary>
-        private static List<string> ignoreFileTypes;
+        private static JSONObject config = null;
 
         /// <summary>
         /// Holds the folder errors message
@@ -119,41 +101,25 @@ namespace Gear.Tools.ConventionKeeper
         private static string folderErrors;
 
         /// <summary>
-        /// Holds the file naming convention data
-        /// </summary>
-        private static JSONObject namingConvention;
-
-        /// <summary>
-        /// Holds the naming convention file types
-        /// </summary>
-        private static Dictionary<string, List<string>> fileTypes;
-
-        /// <summary>
-        /// Holds the convention rules
-        /// </summary>
-        private static List<JSONObject> conventionKeyRules;
-
-        /// <summary>
-        /// Holds the regex dictionary
-        /// </summary>
-        private static Dictionary<string, string> regexDictionary;
-
-        /// <summary>
         /// Holds the state of the current tool, it might be deactivated
         /// </summary>
-        public static bool active;
+        public static bool active = false;
 
         /// <summary>
         /// Function called once when unity opens
         /// </summary>
         static ConventionKeeper()
         {
-            Initialize();
+            if (!ConventionKeeper.GetConfigFileExists() && config == null)
+            {
+                Initialize();
+            }
         }
 
         /// <summary>
         /// Initializes the Convention Keeper Tool
         /// </summary>
+        [MenuItem("Gear/Convention Checker/Check Convention", priority = 0)]
         public static void Initialize()
         {
             //Setup config path with app name
@@ -165,17 +131,6 @@ namespace Gear.Tools.ConventionKeeper
             }
             else
             {
-                config = new JSONObject();
-                folderStructure = new JSONObject();
-                folderDictionary = new Dictionary<string, List<string>>();
-                ignoreFolders = new List<string>();
-                ignoreFileTypes = new List<string>();
-                namingConvention = new JSONObject();
-                fileTypes = new Dictionary<string, List<string>>();
-                conventionKeyRules = new List<JSONObject>();
-                regexDictionary = new Dictionary<string, string>();
-                active = false;
-                LoadConfigs();
                 RunConventionCheck();
             }
         }
@@ -183,6 +138,31 @@ namespace Gear.Tools.ConventionKeeper
         [MenuItem("Gear/Convention Checker/Fake Auto Start")]
         public static void FakeAutoStart()
         {
+            if (config != null)
+            {
+                Clear();
+                config = null;
+            }
+
+            Initialize();
+        }
+
+        [MenuItem("Gear/Convention Checker/Fake Fresh Start")]
+        public static void FakeFreshStart()
+        {
+            if (config != null)
+            {
+                Clear();
+                config = null;
+            }
+
+            if (EditorPrefs.HasKey(autoRecheckKey))
+            {
+                EditorPrefs.DeleteKey(autoRecheckKey);
+            }
+
+            AssetDatabase.DeleteAsset(projectConfigFilePath);
+
             Initialize();
         }
 
@@ -201,6 +181,13 @@ namespace Gear.Tools.ConventionKeeper
             Initialize();
         }
 
+        public static void Clear()
+        {
+            config.Clear();
+            config = null;
+            active = false;
+        }
+
         /// <summary>
         /// Loads the configuration JSON data into respective variables
         /// </summary>
@@ -209,78 +196,19 @@ namespace Gear.Tools.ConventionKeeper
         {
             if (config != null)
             {
-                config.Clear();
-                folderStructure.Clear();
-                folderDictionary.Clear();
-                fileTypes.Clear();
-                ignoreFolders.Clear();
-                ignoreFileTypes.Clear();
-                namingConvention.Clear();
-                conventionKeyRules.Clear();
-                regexDictionary.Clear();
-                active = false;
+                Clear();
             }
 
             TextAsset configFileData = (TextAsset)AssetDatabase.LoadAssetAtPath(projectConfigFilePath, typeof(TextAsset));
 
-            config.Clear();
             config = new JSONObject(configFileData.text);
-            if (!config["active"].b)
+
+            active = config["active"].b;
+
+            if (!active)
             {
                 config.Clear();
                 return;
-            }
-
-            active = true;
-
-            folderStructure = config["folderStructure"];
-            foreach (JSONObject folder in folderStructure["check"]["folders"].list)
-            {
-                if (!folderDictionary.ContainsKey(folder["path"].str))
-                {
-                    List<string> types = new List<string>();
-
-                    foreach (JSONObject type in folder["fileTypesAllowed"].list)
-                    {
-                        types.Add(type.str);
-                    }
-
-                    folderDictionary.Add(folder["path"].str, types);
-                }
-            }
-
-            foreach (JSONObject ignoredFolder in folderStructure["ignore"]["folders"].list)
-            {
-                ignoreFolders.Add(ignoredFolder.str);
-            }
-
-            ignoreFileTypes = new List<string>();
-            foreach (JSONObject ignoredFileType in folderStructure["ignore"]["fileTypes"].list)
-            {
-                ignoreFileTypes.Add(ignoredFileType.str);
-            }
-
-            namingConvention = config["namingConvention"];
-            foreach (JSONObject item in namingConvention["fileTypes"].list)
-            {
-                //Load Conventions
-                List<string> conventions = new List<string>();
-                foreach (JSONObject convention in item["conventions"].list)
-                {
-                    conventions.Add(convention.str);
-                }
-
-                //Load Types
-                foreach (JSONObject type in item["types"].list)
-                {
-                    fileTypes.Add(type.str, conventions);
-                }
-            }
-
-            conventionKeyRules = new List<JSONObject>(namingConvention["conventionKeyRules"].list);
-            foreach (JSONObject item in namingConvention["regexDictionary"].list)
-            {
-                regexDictionary.Add(item["function"].str, item["regex"].str);
             }
         }
 
@@ -296,28 +224,25 @@ namespace Gear.Tools.ConventionKeeper
             AssetDatabase.CreateAsset(configObject, projectConfigFilePath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            LoadConfigs();
+
+            RecheckConventionDialog();
         }
 
         /// <summary>
         /// Manual call of the convention validation
         /// </summary>
-        [MenuItem("Gear/Convention Checker/Check Convention", priority = 0)]
         public static void RunConventionCheck()
         {
+
+
+            if (config == null)
+            {
+                LoadConfigs();
+            }
+
             if (active)
             {
-                //folderErrors = string.Empty;
                 ProcessSubFolders("Assets");
-
-               /* if (folderErrors != string.Empty)
-                {
-                    EditorUtility.DisplayDialog("Folder Convention Errors!", folderErrors, "Ok");
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog("Good!", "No convention errors!", "Ok");
-                }*/
             }
             else
             {
@@ -349,15 +274,20 @@ namespace Gear.Tools.ConventionKeeper
             //Show warnings if any
             if (folderState == FolderConventionState.NotValid)
             {
-                //Dialog("The folder \"" + file.folderAssetsPath + "\" is not following the convention.", "Ok", null);
-
                 NotValidFolderDialog(file.folderAssetsPath);
             }
             else if (folderState == FolderConventionState.Valid && fileState == FileConventionState.NotValid)
             {
-                EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not following the convention.", "Ok");
-
-                //FileNameChangeDialog(file);
+                switch (fileState)
+                {
+                    case FileConventionState.WrongFileName:
+                        FileNameChangeDialog(file);
+                        break;
+                    case FileConventionState.NotValid:
+                        //TODO - Dialog that allows dev to add file type in the config file
+                        EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not format allowed by the convention.", "Ok");
+                        break;
+                }
             }
 
             return fileState;
@@ -370,7 +300,7 @@ namespace Gear.Tools.ConventionKeeper
         /// <returns>The rules object</returns>
         public static JSONObject GetKeyRules(string key)
         {
-            JSONObject rules = conventionKeyRules.Find((JSONObject x) => x["key"].str == key)["rules"];
+            JSONObject rules = config["namingConvention"]["conventionKeyRules"].list.Find((JSONObject x) => x["key"].str == key)["rules"];
             if (rules == null)
             {
                 Debug.LogError("There is no convention rules for the key: " + key);
@@ -384,13 +314,13 @@ namespace Gear.Tools.ConventionKeeper
         /// <param name="file">The file to be evaluated</param>
         /// <param name="conventions">the list of conventions for the given file type</param>
         /// <returns>The state of the file</returns>
-        public static FileConventionState CheckFileNameConvention(FileData file, List<string> conventions)
+        public static FileConventionState CheckFileNameConvention(FileData file, List<JSONObject> conventions)
         {
-            foreach (string convention in conventions)
+            foreach (JSONObject convention in conventions)
             {
                 Regex matchRegex = new Regex("\\{\\w+\\}", RegexOptions.Compiled);
                 string regexToMatch = string.Empty;
-                foreach (Match key in matchRegex.Matches(convention))
+                foreach (Match key in matchRegex.Matches(convention.str))
                 {
                     JSONObject rules = GetKeyRules(key.ToString());
                     if (!rules.IsNull)
@@ -416,25 +346,46 @@ namespace Gear.Tools.ConventionKeeper
         public static FileConventionState CheckFileConvention(FileData file)
         {
             FileConventionState result = FileConventionState.NotValid;
-            List<string> allowedFileTypes = folderDictionary[file.folderAssetsPath];
 
-            bool isAllowedFileType = allowedFileTypes.Contains(file.type);
+            JSONObject pathObject = config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == file.folderAssetsPath);
 
-            if (ignoreFileTypes.Contains(file.type))
+            if (pathObject["fileTypesAllowed"].list != null)
             {
-                result = FileConventionState.Ignored;
-            }
-            else if (isAllowedFileType)
-            {
-                List<string> typeConventions = fileTypes[file.type];
-                if (typeConventions != null)
+                List<JSONObject> allowedFileTypes = new List<JSONObject>(pathObject["fileTypesAllowed"].list);
+
+                JSONObject tmp = allowedFileTypes.Find(x => x.str == file.type);
+
+                bool isAllowedFileType = (tmp != null) ? true : false;
+
+                if (config["folderStructure"]["ignore"]["fileTypes"].list.Find(x => x.str == file.type) != null)
                 {
-                    result = CheckFileNameConvention(file, typeConventions);
+                    result = FileConventionState.Ignored;
                 }
-            }
-            else
-            {
-                result = FileConventionState.NotValid;
+                else if (isAllowedFileType)
+                {
+                    JSONObject conventionObject = GetNameConventionObject(file.type);
+                    if (!conventionObject.IsNull)
+                    {
+                        List<JSONObject> typeConventions = conventionObject["conventions"].list;
+                        if (typeConventions != null)
+                        {
+                            result = CheckFileNameConvention(file, typeConventions);
+                        }
+                    }
+                    else
+                    {
+                        //TODO - There is not convention for the given file type!!! O.O
+                        EditorUtility.DisplayDialog("OOOOPS!", "The file \"" + file.fullName + "\" is not format allowed by the convention." +
+                                                               "\n" +
+                                                               "You might want to add it in the configuration file.", "Ok");
+
+                        result = FileConventionState.NotValid;
+                    }
+                }
+                else
+                {
+                    result = FileConventionState.NotValid;
+                }
             }
 
             return result;
@@ -447,9 +398,9 @@ namespace Gear.Tools.ConventionKeeper
         /// <returns>True if needs to be ignored or false if not</returns>
         public static bool CheckIgnoreFolder(string path)
         {
-            foreach (string ignoredPath in ignoreFolders)
+            foreach (JSONObject ignoredPath in config["folderStructure"]["ignore"]["folders"].list)
             {
-                if (path.Contains(ignoredPath))
+                if (path.Contains(ignoredPath.str))
                 {
                     return true;
                 }
@@ -470,7 +421,7 @@ namespace Gear.Tools.ConventionKeeper
             {
                 result = FolderConventionState.Ignored;
             }
-            else if (folderDictionary.ContainsKey(file.folderAssetsPath))
+            else if (config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == file.folderAssetsPath) != null)
             {
                 result = FolderConventionState.Valid;
             }
@@ -489,7 +440,7 @@ namespace Gear.Tools.ConventionKeeper
             {
                 result = FolderConventionState.Ignored;
             }
-            else if (folderDictionary.ContainsKey(path))
+            else if (config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == path) != null)
             {
                 result = FolderConventionState.Valid;
             }
@@ -505,24 +456,20 @@ namespace Gear.Tools.ConventionKeeper
         /// Recursively checks the conventions in folders and files
         /// </summary>
         /// <param name="path"></param>
-        public static void ProcessSubFolders(string path)
+        public static bool ProcessSubFolders(string path)
         {
+            bool stopProcess = false;
+
             FolderConventionState folderState = CheckFolderConvention(path);
 
             switch (folderState)
             {
                 case FolderConventionState.Ignored:
                     //Do nothing, ignore them :)
-                    return;
                     break;
 
                 case FolderConventionState.Valid:
-                    List<string> allowedFileTypes = folderDictionary[path];
-
-                    if (allowedFileTypes == null)
-                    {
-                        return;
-                    }
+                    List<JSONObject> allowedFileTypes = config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == path)["fileTypesAllowed"].list;
 
                     List<FileData> assetList = GetAllFilesDataAtPath(path);
 
@@ -551,7 +498,7 @@ namespace Gear.Tools.ConventionKeeper
                                         "Add to Ignored File Types",
                                         delegate ()
                                         {
-                                            //TODO - Add option to write the file type into the ignored types of configuration file
+                                            //Write the file type into the ignored types of configuration file
                                             config["folderStructure"]["ignore"]["fileTypes"].Add(asset.type);
                                             SaveConfigs();
                                         },
@@ -562,6 +509,11 @@ namespace Gear.Tools.ConventionKeeper
                                         });
                                     break;
                             }
+
+                            if (conventionState == FileConventionState.WrongFileName || conventionState == FileConventionState.NotValid)
+                            {
+                                stopProcess = true;
+                            }
                         }
                     }
                     else if (allowedFileTypes == null && assetList.Count > 0)
@@ -570,8 +522,7 @@ namespace Gear.Tools.ConventionKeeper
                                 "Add FILE TYPES to this path Convention",
                                 delegate ()
                                 {
-                                    //TODO - Add option to write the file type into a folder in the configuration file
-                                    //Adds file type to the current path allowed file types
+                                    //Write the file type into a folder in the configuration file
                                     int indexOfFolderData = config["folderStructure"]["check"]["folders"].list.FindIndex(x => x["path"].str == path);
 
                                     foreach (FileData asset in assetList)
@@ -584,7 +535,7 @@ namespace Gear.Tools.ConventionKeeper
                                 "Delete wrong FILES",
                                 delegate ()
                                 {
-                                    //TODO - Delete files that are not in the allowed file types list
+                                    //Delete files that are not in the allowed file types list
                                     DeleteDialog(delegate ()
                                     {
                                         foreach (FileData asset in assetList)
@@ -593,6 +544,8 @@ namespace Gear.Tools.ConventionKeeper
                                         }
 
                                         AssetDatabase.Refresh();
+
+                                        RecheckConventionDialog();
                                     });
                                 },
                                 "Do nothing right now",
@@ -601,15 +554,26 @@ namespace Gear.Tools.ConventionKeeper
                                     //Do nothing - Highlight the parent folder just so the user can check it if wants
                                     EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path));
                                 });
+
+                        stopProcess = true;
                     }
 
                     //Check sub folders if allowed
+
+                    if (allowedFileTypes == null) //There is no aloowed type in the folder
+                    {
+                        return false;
+                    }
+
                     List<string> subFolders = new List<string>(AssetDatabase.GetSubFolders(path));
-                    if (allowedFileTypes.Contains("folder"))
+                    if (allowedFileTypes.Find(x => x.str == "folder") != null)
                     {
                         for (int i = 0; i < subFolders.Count; i++)
                         {
-                            ProcessSubFolders(subFolders[i]);
+                            if (ProcessSubFolders(subFolders[i])) //If returns 1, means we need to stop the processing as the validation process might changed
+                            {
+                                break;
+                            }
                         }
                     }
                     else
@@ -620,8 +584,7 @@ namespace Gear.Tools.ConventionKeeper
                                 "Add FOLDERS permission to this path",
                                 delegate ()
                                 {
-                                    //TODO - Add option to write the file type into a folder in the configuration file
-                                    //Adds file type to the current path allowed file types
+                                    //Write the file type into a folder in the configuration file
                                     int indexOfFolderData = config["folderStructure"]["check"]["folders"].list.FindIndex(x => x["path"].str == path);
                                     config["folderStructure"]["check"]["folders"][indexOfFolderData]["fileTypesAllowed"].Add("folder");
                                     SaveConfigs();
@@ -629,7 +592,7 @@ namespace Gear.Tools.ConventionKeeper
                                 "Delete FOLDERS",
                                 delegate ()
                                 {
-                                    //TODO - Delete the list of sub folders
+                                    //Delete the list of sub folders
                                     DeleteDialog(delegate ()
                                     {
                                         foreach (string folder in subFolders)
@@ -638,6 +601,8 @@ namespace Gear.Tools.ConventionKeeper
                                         }
 
                                         AssetDatabase.Refresh();
+
+                                        RecheckConventionDialog();
                                     });
                                 },
                                 "Do nothing right now",
@@ -646,6 +611,8 @@ namespace Gear.Tools.ConventionKeeper
                                     //Do nothing - Highlight the parent folder just so the user can check it if wants
                                     EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path));
                                 });
+
+                            stopProcess = true;
                         }
                     }
                     break;
@@ -654,38 +621,12 @@ namespace Gear.Tools.ConventionKeeper
 
                     NotValidFolderDialog(path);
 
-                    /*Dialog("The path \"" + path + "\" is not in the Convention, what to do?",
-                                "Add FOLDER to Convention",
-                                delegate ()
-                                {
-                                    //TODO - Add option to write the folder in the configuration file
+                    stopProcess = true;
 
-                                    JSONObject folderObject = new JSONObject();
-                                    folderObject.AddField("path", path);
-                                    folderObject.AddField("fileTypesAllowed", new JSONObject());
-
-                                    config["folderStructure"]["check"]["folders"].Add(folderObject);
-
-                                    SaveConfigs();
-                                },
-                                "Ignore It",
-                                delegate ()
-                                {
-                                    config["folderStructure"]["ignore"]["folders"].Add(path);
-                                    SaveConfigs();
-                                },
-                                "Delete FOLDER",
-                                delegate ()
-                                {
-                                    //TODO - Delete the folder
-                                    DeleteDialog(delegate ()
-                                    {
-                                        AssetDatabase.DeleteAsset(path);
-                                        AssetDatabase.Refresh();
-                                    });
-                                });*/
                     break;
             }
+
+            return stopProcess;
         }
 
         /// <summary>
@@ -705,9 +646,9 @@ namespace Gear.Tools.ConventionKeeper
         public static List<FileData> GetAllFilesDataAtPath(string path)
         {
             List<string> fileEntries = new List<string>(Directory.GetFiles(Application.dataPath + path.Remove(0, 6)));
-            foreach (string type in ignoreFileTypes)
+            foreach (JSONObject type in config["folderStructure"]["ignore"]["fileTypes"].list)
             {
-                fileEntries.RemoveAll((string x) => x.Contains("." + type));
+                fileEntries.RemoveAll(x => x.Contains("." + type.str));
             }
 
             List<FileData> tmpFileDataList = new List<FileData>();
@@ -727,16 +668,18 @@ namespace Gear.Tools.ConventionKeeper
         public static string GetRuleFunctionRegex(string ruleFunction)
         {
             string[] ruleData = ruleFunction.Split('(');
-            string ruleRegex2 = "";
+            string ruleRegex = "";
 
-            if (regexDictionary.ContainsKey(ruleData[0]))
+            JSONObject functionRegex = config["namingConvention"]["regexDictionary"].list.Find(x => x["function"].str == ruleData[0]);
+
+            if (functionRegex != null)
             {
-                ruleRegex2 = regexDictionary[ruleData[0]];
-                if (ruleRegex2.Contains("KEY"))
+                ruleRegex = functionRegex["regex"].str;
+                if (ruleRegex.Contains("KEY"))
                 {
-                    ruleRegex2 = ruleRegex2.Replace("KEY", ruleData[1]);
+                    ruleRegex = ruleRegex.Replace("KEY", ruleData[1]);
                 }
-                return ruleRegex2;
+                return ruleRegex;
             }
 
             Debug.LogError("There is no rule for the Rule Function: " + ruleData[0]);
@@ -792,6 +735,22 @@ namespace Gear.Tools.ConventionKeeper
             return false;
         }
 
+        public static JSONObject GetNameConventionObject(string type)
+        {
+            JSONObject conventionObject = new JSONObject();
+
+            foreach (JSONObject item in config["namingConvention"]["fileTypes"].list)
+            {
+                if (item["types"].list.Find(x => x.str == type) != null)
+                {
+                    conventionObject = item;
+                    break;
+                }
+            }
+
+            return conventionObject;
+        }
+
         #region DIALOGS
 
         public static void Dialog(string message, string ok, Action okCallback)
@@ -832,9 +791,13 @@ namespace Gear.Tools.ConventionKeeper
         {
             string conventionList = string.Empty;
 
-            foreach (string item in fileTypes[asset.type])
+            JSONObject conventionObject = GetNameConventionObject(asset.type);
+            if (!conventionObject.IsNull)
             {
-                conventionList += item + "\n";
+                foreach (JSONObject item in conventionObject["conventions"].list)
+                {
+                    conventionList += item.str + "\n";
+                }
             }
 
             DialogInputField("The file \"" + asset.fullName + "\" does not match the convention criteria." +
@@ -879,10 +842,29 @@ namespace Gear.Tools.ConventionKeeper
 
         public static void RecheckConventionDialog()
         {
-            Dialog("Would you like to RECHECK the convetion?", "Yes :)", delegate ()
+            bool autoRecheck = false;
+            if (EditorPrefs.HasKey(autoRecheckKey))
+            {
+                autoRecheck = EditorPrefs.GetBool(autoRecheckKey);
+            }
+
+            if (!autoRecheck)
+            {
+                Dialog("Would you like to RECHECK the convetion?", "Yes :)", delegate ()
+                {
+                    RunConventionCheck();
+                },
+                "Always Recheck",
+                delegate ()
+                {
+                    EditorPrefs.SetBool(autoRecheckKey, true);
+                    RunConventionCheck();
+                }, "No", null);
+            }
+            else
             {
                 RunConventionCheck();
-            }, "No", null);
+            }
         }
 
         public static void NotValidFolderDialog(string path)
@@ -891,11 +873,11 @@ namespace Gear.Tools.ConventionKeeper
                                 "Add FOLDER to Convention",
                                 delegate ()
                                 {
-                                    //TODO - Add option to write the folder in the configuration file
+                                    //Write the folder in the configuration file
 
                                     JSONObject folderObject = new JSONObject();
                                     folderObject.AddField("path", path);
-                                    folderObject.AddField("fileTypesAllowed", new JSONObject());
+                                    folderObject.AddField("fileTypesAllowed", new JSONObject("[]"));
 
                                     config["folderStructure"]["check"]["folders"].Add(folderObject);
 
@@ -910,7 +892,7 @@ namespace Gear.Tools.ConventionKeeper
                                 "Delete FOLDER",
                                 delegate ()
                                 {
-                                    //TODO - Delete the folder
+                                    //Delete the folder
                                     DeleteDialog(delegate ()
                                     {
                                         AssetDatabase.DeleteAsset(path);
