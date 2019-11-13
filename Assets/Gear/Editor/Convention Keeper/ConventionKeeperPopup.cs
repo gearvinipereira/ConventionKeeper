@@ -163,7 +163,10 @@ namespace Gear.Tools.ConventionKeeper
 
         private void OnGUI()
         {
-            this.drawFunction.Invoke();
+            if (this.drawFunction != null)
+            {
+                this.drawFunction.Invoke();
+            }
         }
 
         public void DrawDialog()

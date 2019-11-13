@@ -57,10 +57,13 @@ namespace Gear.Tools.ConventionKeeper
         public FileData(string fullFilePath)
         {
             name = Path.GetFileNameWithoutExtension(fullFilePath);
-            fullName = Path.GetFileName(fullFilePath);
 
             string extension = Path.GetExtension(fullFilePath);
             type = (extension != string.Empty) ? extension.Remove(0, 1) : "folder";
+            type = type.ToLower();
+
+            fullName = name + "." + type;
+
             assetsFullPath = fullFilePath.Remove(0, fullFilePath.IndexOf("Assets"));
 
             if (fullFilePath.Contains("\\"))
@@ -329,9 +332,15 @@ namespace Gear.Tools.ConventionKeeper
                     }
                 }
 
-                if (Regex.Match(file.fullName, regexToMatch).Success)
+                Match match = Regex.Match(file.fullName, regexToMatch);
+
+                if (match.Success)
                 {
                     return FileConventionState.Valid;
+                }
+                else
+                {
+                    Debug.LogError("[Match Problem] Value: " + match.Value + " | Regex to Match: " + regexToMatch);
                 }
             }
 

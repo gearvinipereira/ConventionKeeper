@@ -14,7 +14,8 @@
 		"Assets/Gear"
       ],
       "fileTypes": [
-		"meta"
+		"meta",
+		"xml"
 	  ]
     }
   },
@@ -45,6 +46,12 @@
           "{usage}_{textureName}.{extension}"
         ]
       },
+      {
+        "types": ["mat"],
+        "conventions": [
+          "{usage}_{materialName}.{extension}"
+        ]
+      },,
 	  {
 		"types": ["cs"],
         "conventions": [
@@ -55,6 +62,12 @@
 		"types": ["unity"],
         "conventions": [
           "{sceneName}.{extension}"
+        ]
+	  },
+	  {
+		"types": ["shader"],
+        "conventions": [
+          "{shaderName}.{extension}"
         ]
 	  }
     ],
@@ -76,7 +89,11 @@
 		  "is(prefab",
 		  "is(anim",
 		  "is(mat",
-		  "is(controller" 
+		  "is(controller",
+		  "is(cs",
+		  "is(unity",
+		  "is(fbx",
+		  "is(obj"
         ]
       },
 	  {
@@ -111,6 +128,18 @@
 	  },
 	  {
 	    "key":"{sceneName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{shaderName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{materialName}",
 		"rules" : [
 			"text"
 		]
