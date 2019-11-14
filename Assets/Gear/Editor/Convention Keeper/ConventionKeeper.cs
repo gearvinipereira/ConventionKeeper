@@ -26,6 +26,8 @@ namespace Gear.Tools.ConventionKeeper
     {
         Valid,
         Ignored,
+        UnknownFiles,
+        NoFoldersAllowed,
         NotValid
     }
 
@@ -38,6 +40,7 @@ namespace Gear.Tools.ConventionKeeper
         Ignored,
         WrongDirectory,
         WrongFileName,
+        UnknownFileType,
         NotValid
     }
 
@@ -53,6 +56,8 @@ namespace Gear.Tools.ConventionKeeper
         public string type;
         public string assetsFullPath;
         public string folderAssetsPath;
+        public List<FolderConventionState> folderError = new List<FolderConventionState>();
+        public List<FileConventionState> fileError = new List<FileConventionState>();
 
         public FileData(string fullFilePath)
         {
@@ -71,7 +76,10 @@ namespace Gear.Tools.ConventionKeeper
                 assetsFullPath = assetsFullPath.Replace("\\", "/");
             }
 
-            folderAssetsPath = assetsFullPath.Remove(assetsFullPath.IndexOf("/" + name));
+            if (fullFilePath.Contains("/"))
+            {
+                folderAssetsPath = assetsFullPath.Remove(assetsFullPath.IndexOf("/" + name));
+            }
         }
     }
 
@@ -89,6 +97,8 @@ namespace Gear.Tools.ConventionKeeper
 
         private const string autoRecheckKey = "AutoRecheckAfterDialog";
 
+        public const string setupDoneKey = "isSetupDone";
+
         private const string toolName = "Convention Keeper";
 
         private const string toolVersion = "v0.2";
@@ -96,7 +106,7 @@ namespace Gear.Tools.ConventionKeeper
         /// <summary>
         /// Holds the configuration JSON file data
         /// </summary>
-        private static JSONObject config = null;
+        public static JSONObject config = null;
 
         /// <summary>
         /// Holds the folder errors message
@@ -107,6 +117,10 @@ namespace Gear.Tools.ConventionKeeper
         /// Holds the state of the current tool, it might be deactivated
         /// </summary>
         public static bool active = false;
+
+        //Overview Vars
+        public static List<FileData> overviewFolderList = new List<FileData>();
+        public static List<FileData> overviewFileList = new List<FileData>();
 
         /// <summary>
         /// Function called once when unity opens
@@ -128,13 +142,16 @@ namespace Gear.Tools.ConventionKeeper
             //Setup config path with app name
             projectConfigFilePath = projectConfigFilePath.Replace("{NAME}", Application.productName);
 
-            if (!ConventionKeeper.GetConfigFileExists())
+            if (EditorPrefs.HasKey(setupDoneKey))
             {
-                ConventionKeeperPopup.FirstTimeDialog(500, 250);
+                if (EditorPrefs.GetBool(setupDoneKey)) //If the setup was done the Convention Keeper runs, if not it assumes its not to.
+                {
+                    RunConventionCheck();
+                }
             }
             else
             {
-                RunConventionCheck();
+                ConventionKeeperPopup.FirstTimeDialog(500, 250);
             }
         }
 
@@ -164,6 +181,11 @@ namespace Gear.Tools.ConventionKeeper
                 EditorPrefs.DeleteKey(autoRecheckKey);
             }
 
+            if (EditorPrefs.HasKey(setupDoneKey))
+            {
+                EditorPrefs.DeleteKey(setupDoneKey);
+            }
+
             AssetDatabase.DeleteAsset(projectConfigFilePath);
 
             Initialize();
@@ -181,7 +203,13 @@ namespace Gear.Tools.ConventionKeeper
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Initialize();
+            LoadConfigs();
+
+            OverviewProcessFolder("Assets");
+
+            ConventionKeeperPopup.OverviewDialog();
+
+            //Initialize();
         }
 
         public static void Clear()
@@ -215,6 +243,19 @@ namespace Gear.Tools.ConventionKeeper
             }
         }
 
+        [MenuItem("Gear / Convention Checker / Open Overview", priority = 1)]
+        public static void OpenOverview()
+        {
+            if (EditorPrefs.HasKey(setupDoneKey))
+            {
+                ClearOverview();
+
+                ConventionKeeper.OverviewProcessFolder("Assets");
+
+                ConventionKeeperPopup.OverviewDialog();
+            }
+        }
+
         public static bool GetConfigFileExists()
         {
             string path = Application.dataPath.Remove(Application.dataPath.IndexOf("Assets")) + projectConfigFilePath;
@@ -236,8 +277,6 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         public static void RunConventionCheck()
         {
-
-
             if (config == null)
             {
                 LoadConfigs();
@@ -338,10 +377,10 @@ namespace Gear.Tools.ConventionKeeper
                 {
                     return FileConventionState.Valid;
                 }
-                else
+                /*else
                 {
                     Debug.LogError("[Match Problem] Value: " + match.Value + " | Regex to Match: " + regexToMatch);
-                }
+                }*/
             }
 
             return FileConventionState.WrongFileName;
@@ -357,6 +396,11 @@ namespace Gear.Tools.ConventionKeeper
             FileConventionState result = FileConventionState.NotValid;
 
             JSONObject pathObject = config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == file.folderAssetsPath);
+
+            if(pathObject == null)
+            {
+                return result;
+            }
 
             if (pathObject["fileTypesAllowed"].list != null)
             {
@@ -636,6 +680,71 @@ namespace Gear.Tools.ConventionKeeper
             }
 
             return stopProcess;
+        }
+
+        public static void ClearOverview()
+        {
+            overviewFileList.Clear();
+            overviewFolderList.Clear();
+        }
+
+        public static void OverviewProcessFolder(string path)
+        {
+            JSONObject pathConfig = config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == path);
+
+            List<JSONObject> allowedFileTypes = (pathConfig != null)? pathConfig["fileTypesAllowed"].list : null;
+
+            List<FileData> assetList = GetAllFilesDataAtPath(path);
+
+            FolderConventionState folderState = CheckFolderConvention(path);
+
+            FileData folderData = new FileData(path);
+
+            if(folderState == FolderConventionState.NotValid)
+            {
+                folderData.folderError.Add(FolderConventionState.NotValid);
+            }
+
+            List<string> subFolders = new List<string>(AssetDatabase.GetSubFolders(path));
+            if (subFolders.Count > 0)
+            {
+                folderData.folderError.Add(FolderConventionState.NoFoldersAllowed);
+
+                for (int i = 0; i < subFolders.Count; i++)
+                {
+                    OverviewProcessFolder(subFolders[i]);
+                }
+            }
+
+            if (allowedFileTypes == null && assetList.Count > 0)
+            {
+                folderData.folderError.Add(FolderConventionState.UnknownFiles);
+            }
+
+            if (folderState != FolderConventionState.Ignored)
+                overviewFolderList.Add(folderData);
+
+            //Process Files
+            if (assetList.Count > 0)
+            {
+                foreach (FileData asset in assetList)
+                {
+                    FileConventionState conventionState = CheckFileConvention(asset);
+
+                    switch (conventionState)
+                    {
+                        case FileConventionState.WrongFileName:
+                            asset.fileError.Add(FileConventionState.WrongFileName);
+                            break;
+                        case FileConventionState.NotValid:
+                            asset.fileError.Add(FileConventionState.NotValid);
+
+                            break;
+                    }
+
+                    overviewFileList.Add(asset);
+                }
+            }
         }
 
         /// <summary>
