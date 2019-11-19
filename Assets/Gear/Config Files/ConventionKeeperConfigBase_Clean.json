@@ -1,0 +1,171 @@
+{
+  "active":true,
+  "folderStructure": {
+    "check":{
+      "folders": [
+		{
+		  "path": "Assets",
+          "fileTypesAllowed": ["folder"]
+		}
+      ]
+    },
+    "ignore":{
+      "folders": [
+		"Assets/Gear"
+      ],
+      "fileTypes": [
+		"meta",
+		"xml"
+	  ]
+    }
+  },
+  "namingConvention": {
+    "fileTypes":[
+      {
+        "types": ["fbx","obj"],
+        "conventions": [
+          "{usage}_{modelName}.{extension}"
+        ]
+      },
+      {
+        "types": ["anim"],
+        "conventions": [
+          "{usage}_{animationName}_Anim.{extension}",
+          "{usage}_Anim_{animationName}.{extension}"
+        ]
+      },
+	  {
+        "types": ["controller"],
+        "conventions": [
+          "{usage}_{controllerName}.{extension}"
+        ]
+      },
+      {
+        "types": ["jpg","png"],
+        "conventions": [
+          "{usage}_{textureName}.{extension}"
+        ]
+      },
+      {
+        "types": ["mat"],
+        "conventions": [
+          "{usage}_{materialName}.{extension}"
+        ]
+      },,
+	  {
+		"types": ["cs"],
+        "conventions": [
+          "{scriptName}.{extension}"
+        ]
+	  },
+	  {
+		"types": ["unity"],
+        "conventions": [
+          "{sceneName}.{extension}"
+        ]
+	  },
+	  {
+		"types": ["shader"],
+        "conventions": [
+          "{shaderName}.{extension}"
+        ]
+	  }
+    ],
+    "conventionKeyRules":[
+      {
+        "key":"{animationName}",
+        "rules": [
+		  "sufix(_Anim",
+		  "prefix(Anim_"
+        ]
+      },
+	  {
+        "key":"{extension}",
+        "rules": [
+          "exact(.",
+		  "is(jpg",
+		  "is(png",
+		  "is(shader",
+		  "is(prefab",
+		  "is(anim",
+		  "is(mat",
+		  "is(controller",
+		  "is(cs",
+		  "is(unity",
+		  "is(fbx",
+		  "is(obj"
+        ]
+      },
+	  {
+        "key":"{usage}",
+        "rules": [
+          "sufix(_"
+        ]
+      },
+	  {
+	    "key":"{modelName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{textureName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{controllerName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{scriptName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{sceneName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{shaderName}",
+		"rules" : [
+			"text"
+		]
+	  },
+	  {
+	    "key":"{materialName}",
+		"rules" : [
+			"text"
+		]
+	  }
+    ],
+	"regexDictionary":[
+	  {
+	    "function":"prefix",
+		"regex":"KEY\w+"
+	  },
+	  {
+	    "function":"sufix",
+		"regex":"\w+KEY"
+	  },
+	  {
+	    "function":"is",
+		"regex":"KEY"
+	  },
+	  {
+	    "function":"exact",
+		"regex":"KEY"
+	  },
+	  {
+	    "function":"text",
+		"regex":"\w+"
+	  }
+	]
+  }
+}
