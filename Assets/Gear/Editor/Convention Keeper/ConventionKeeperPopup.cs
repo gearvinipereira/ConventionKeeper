@@ -93,6 +93,12 @@ namespace Gear.Tools.ConventionKeeper
     public class ConventionKeeperPopup : EditorWindow
     {
         #region Public Variables
+
+        /// <summary>
+        /// The window.
+        /// </summary>
+        ConventionKeeperPopup window;
+
         /// <summary>
         /// Holds dialog title.
         /// </summary>
@@ -138,6 +144,8 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         public string configText;
 
+        Color backgroundColor = new Color(0.5f, 0.9f, 0.9f, 0.25f);
+
         #endregion
 
         #region Dialog Setups
@@ -145,7 +153,7 @@ namespace Gear.Tools.ConventionKeeper
         /// <summary>
         /// Setup for the 2 input buttons dialog.
         /// </summary>
-        public static void Dialog(string title, string message, ButtonData ok, ButtonData cancel, int width = 0, int height = 0)
+        public static void Dialog(string title, string message, ButtonData ok, ButtonData cancel, int width = 0, int height = 0, Color customBGColor = new Color())
         {
             ConventionKeeperPopup window = ScriptableObject.CreateInstance<ConventionKeeperPopup>();
 
@@ -163,13 +171,15 @@ namespace Gear.Tools.ConventionKeeper
 
             window.drawFunction = new Action(window.DrawDialog);
 
+            window.backgroundColor = customBGColor;
+
             window.ShowPopup();
         }
 
         /// <summary>
         /// Setup for the N input buttons dialog.
         /// </summary>
-        public static void Dialog(string title, string message, List<ButtonData> buttonList, int width = 0, int height = 0)
+        public static void Dialog(string title, string message, List<ButtonData> buttonList, int width = 0, int height = 0, Color customBGColor = new Color())
         {
             ConventionKeeperPopup window = ScriptableObject.CreateInstance<ConventionKeeperPopup>();
 
@@ -184,6 +194,8 @@ namespace Gear.Tools.ConventionKeeper
             window.buttonList = buttonList;
 
             window.drawFunction = new Action(window.DrawDialog);
+
+            window.backgroundColor = customBGColor;
 
             window.ShowPopup();
         }
@@ -270,6 +282,8 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         public void DrawDialog()
         {
+            EditorGUI.DrawRect(new Rect(0, 0, maxSize.x, maxSize.y), backgroundColor);
+
             if (GUILayout.Button("X"))
             {
                 this.Close();
@@ -302,6 +316,8 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         public void DrawDialogWithInputField()
         {
+            EditorGUI.DrawRect(new Rect(0, 0, maxSize.x, maxSize.y), backgroundColor);
+
             if (GUILayout.Button("X"))
             {
                 this.Close();
@@ -353,6 +369,8 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         public void DrawFirstTimeDialog()
         {
+            EditorGUI.DrawRect(new Rect(0, 0, maxSize.x, maxSize.y), backgroundColor);
+
             DrawButton("X", delegate ()
             {
                 EditorPrefs.SetBool(ConventionKeeper.setupDoneKey, false);
@@ -417,6 +435,8 @@ namespace Gear.Tools.ConventionKeeper
         /// </summary>
         public void DrawOverviewDialog()
         {
+            EditorGUI.DrawRect(new Rect(0, 0, maxSize.x, maxSize.y), backgroundColor);
+
             GUIStyle style = new GUIStyle(GUI.skin.label);
             style.richText = true;
 
@@ -439,6 +459,8 @@ namespace Gear.Tools.ConventionKeeper
             switch (tab)
             {
                 case TabOption.Folders:
+
+                    GUILayout.Label("Not Convention Valid Folders: " + ConventionKeeper.overviewFolderList.Count);
 
                     if (ConventionKeeper.overviewFolderList.Count == 0)
                     {
@@ -476,9 +498,6 @@ namespace Gear.Tools.ConventionKeeper
                                     {
                                         //Fix it
                                         ConventionKeeper.AddPathToConvention(item.assetsFullPath);
-
-                                        //Reset Overview Data - Recheck convention
-                                        ConventionKeeper.RefreshOverview();
                                     }
 
                                     //Fix noFoldersAllowed second because with no folders allowance the code does not check child folders and just halt.
@@ -486,20 +505,26 @@ namespace Gear.Tools.ConventionKeeper
                                     {
                                         //Fix it
                                         ConventionKeeper.AddFolderTypeToPath(item.assetsFullPath);
-
-                                        //Reset Overview Data - Recheck convention
-                                        ConventionKeeper.RefreshOverview();
                                     }
+
+                                    //Reset Overview Data - Recheck convention
+                                    RefreshOverviewData();
                                 }, 10);
 
                                 DrawButton("Ignore", delegate ()
                                 {
                                     ConventionKeeper.AddToIgnoredPaths(item.assetsFullPath);
+
+                                    //Reset Overview Data - Recheck convention
+                                    RefreshOverviewData();
                                 }, 10);
 
                                 DrawButton("Delete", delegate ()
                                 {
                                     ConventionKeeper.DeleteFolder(item.assetsFullPath);
+
+                                    //Reset Overview Data - Recheck convention
+                                    RefreshOverviewData();
                                 }, 10);
 
                                 GUILayout.Label(item.assetsFullPath + errors, style);
@@ -516,6 +541,8 @@ namespace Gear.Tools.ConventionKeeper
 
                     break;
                 case TabOption.Files:
+
+                    GUILayout.Label("Not Convention Valid Files: " + ConventionKeeper.overviewFileList.Count);
 
                     if (ConventionKeeper.overviewFolderList.Count > 0)
                     {
@@ -575,6 +602,22 @@ namespace Gear.Tools.ConventionKeeper
                                         {
                                             ConventionKeeper.AddFileTypeToPath(item);
                                         }
+
+                                        //Reset Overview Data - Recheck convention
+                                        RefreshOverviewData();
+                                    }, 10);
+                                }
+
+                                if (ConventionKeeper.IsValidFileType(item.type))
+                                {
+                                    DrawButton("Ignore File", delegate ()
+                                    {
+                                        breakLoop = true;
+
+                                        ConventionKeeper.AddToIgnoredFiles(item);
+
+                                        //Reset Overview Data - Recheck convention
+                                        RefreshOverviewData();
                                     }, 10);
                                 }
 
@@ -582,14 +625,27 @@ namespace Gear.Tools.ConventionKeeper
                                 {
                                     DrawButton("Ignore Type", delegate ()
                                     {
+                                        breakLoop = true;
+
                                         ConventionKeeper.AddToIgnoredFileTypes(item);
+
+                                        //Reset Overview Data - Recheck convention
+                                        RefreshOverviewData();
                                     }, 10);
                                 }
 
-                                DrawButton("Delete File", delegate ()
+                                if (item.type != "cs")
                                 {
-                                    ConventionKeeper.DeleteDialog(item);
-                                }, 10);
+                                    DrawButton("Delete File", delegate ()
+                                    {
+                                        breakLoop = true;
+
+                                        ConventionKeeper.DeleteDialog(item);
+
+                                    //Reset Overview Data - Recheck convention
+                                    RefreshOverviewData();
+                                    }, 10);
+                                }
 
                                 GUILayout.Label(item.assetsFullPath + errors, style);
                             }
@@ -636,8 +692,7 @@ namespace Gear.Tools.ConventionKeeper
             {
                 if (GUILayout.Button("Refresh"))
                 {
-                    configText = ConventionKeeper.config.ToString(true);
-                    ConventionKeeper.RefreshOverview();
+                    RefreshOverviewData();
                 }
 
                 if (!EditorPrefs.HasKey(ConventionKeeper.setupDoneKey))
@@ -651,6 +706,36 @@ namespace Gear.Tools.ConventionKeeper
                 }
             }
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            {
+                if (!EditorPrefs.HasKey(ConventionKeeper.setupDoneKey) || !EditorPrefs.GetBool(ConventionKeeper.setupDoneKey))
+                {
+                    if (ConventionKeeper.overviewFolderList.Count > 0 || ConventionKeeper.overviewFileList.Count > 0)
+                    {
+                        GUI.enabled = false;
+                    }
+                    else
+                    {
+                        GUI.enabled = true;
+                    }
+
+                    if (GUILayout.Button("Finish First Time Setup"))
+                    {
+                        EditorPrefs.SetBool(ConventionKeeper.setupDoneKey, true);
+                        this.Close();
+                    }
+
+                    GUI.enabled = true;
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        public void RefreshOverviewData()
+        {
+            configText = ConventionKeeper.config.ToString(true);
+            ConventionKeeper.RefreshOverview();
         }
 
         #endregion

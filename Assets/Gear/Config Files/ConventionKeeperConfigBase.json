@@ -13,10 +13,6 @@
 		},
 		{
 		  "path": "Assets/Art/Models",
-          "fileTypesAllowed": ["folder"]
-		},
-		{
-		  "path": "Assets/Art/Models/Others",
           "fileTypesAllowed": ["folder", "fbx", "obj"]
 		},
 		{
@@ -25,55 +21,19 @@
 		},
 		{
 		  "path": "Assets/Art/Animations",
-          "fileTypesAllowed": ["folder"]
-		},
-		{
-		  "path": "Assets/Art/Animations/Others",
-          "fileTypesAllowed": ["folder", "anim"]
+          "fileTypesAllowed": ["folder", "anim", "controller"]
 		},
 		{
 		  "path": "Assets/Art/Materials",
-          "fileTypesAllowed": ["folder"]
-		},
-		{
-		  "path": "Assets/Art/Materials/Models",
-          "fileTypesAllowed": ["folder", "mat"]
-		},
-		{
-		  "path": "Assets/Art/Materials/VFX",
-          "fileTypesAllowed": ["folder", "mat"]
-		},
-		{
-		  "path": "Assets/Art/Materials/Fonts",
-          "fileTypesAllowed": ["folder", "mat"]
-		},
-		{
-		  "path": "Assets/Art/Materials/Others",
           "fileTypesAllowed": ["folder", "mat"]
 		},
 		{
 		  "path": "Assets/Art/Shaders",
-          "fileTypesAllowed": ["folder"]
-		},
-		{
-		  "path": "Assets/Art/Shaders/Others",
-          "fileTypesAllowed": ["folder","shader"]
+          "fileTypesAllowed": ["folder", "shader"]
 		},
 		{
 		  "path": "Assets/Art/Textures",
-          "fileTypesAllowed": ["folder"]
-		},
-		{
-		  "path": "Assets/Art/Textures/UI",
-          "fileTypesAllowed": ["folder","png","jpg"]
-		},
-		{
-		  "path": "Assets/Art/Textures/VFX",
-          "fileTypesAllowed": ["folder","png","jpg"]
-		},
-		{
-		  "path": "Assets/Art/Textures/Others",
-          "fileTypesAllowed": ["folder","png","jpg"]
+          "fileTypesAllowed": ["folder","png","jpg", "tga"]
 		},
 		{
 		  "path": "Assets/Art/FontsRaw",
@@ -81,7 +41,7 @@
 		},
 		{
 		  "path": "Assets/Prefabs",
-          "fileTypesAllowed": ["folder"]
+          "fileTypesAllowed": ["folder", "prefab"]
 		},
 		{
 		  "path": "Assets/Prefabs/FortuneCookie",
@@ -123,7 +83,13 @@
 		"meta",
 		"xml",
 		"rsp",
-		"DS_Store"
+		"DS_Store",
+		"tpsheet",
+		"spriteatlas",
+		"asset"
+	  ],
+	  "files": [
+		"anyFile.ext"
 	  ]
     }
   },
@@ -132,38 +98,37 @@
       {
         "types": ["fbx","obj"],
         "conventions": [
-          "{modelName}.{extension}"
+          "{name}.{extension}"
         ]
       },
       {
         "types": ["anim"],
         "conventions": [
-          "{usage}_{animationName}_Anim.{extension}",
-          "{usage}_Anim_{animationName}.{extension}"
+          "{name}.{extension}"
         ]
       },
 	  {
         "types": ["controller"],
         "conventions": [
-          "{usage}_{controllerName}.{extension}"
+          "{name}.{extension}"
         ]
       },
       {
-        "types": ["jpg","png"],
+        "types": ["jpg","png","tga"],
         "conventions": [
-          "{usage}_{textureName}.{extension}"
+          "{usage}_{name}.{extension}"
         ]
       },
       {
         "types": ["mat"],
         "conventions": [
-          "{usage}_{materialName}.{extension}"
+          "{usage}_{name}.{extension}"
         ]
-      },,
+      },
 	  {
 		"types": ["cs"],
         "conventions": [
-          "{scriptName}.{extension}"
+          "{name}.{extension}"
         ]
 	  },
 	  {
@@ -175,28 +140,27 @@
 	  {
 		"types": ["shader"],
         "conventions": [
-          "{shaderName}.{extension}"
+          "{name}.{extension}"
         ]
 	  },
 	  {
 		"types": ["prefab"],
         "conventions": [
-          "{prefabName}_Prefab.{extension}"
+          "{name}.{extension}"
         ]
 	  },
 	  {
 		"types": ["otf","ttf"],
         "conventions": [
-          "{fontName}.{extension}"
+          "{name}.{extension}"
         ]
 	  }
     ],
     "conventionKeyRules":[
       {
-        "key":"{animationName}",
+        "key":"{name}",
         "rules": [
-		  "sufix(_Anim",
-		  "prefix(Anim_"
+		  "text"
         ]
       },
 	  {
@@ -205,6 +169,7 @@
           "exact(.",
 		  "is(jpg",
 		  "is(png",
+		  "is(tga",
 		  "is(shader",
 		  "is(prefab",
 		  "is(anim",
@@ -219,63 +184,15 @@
         ]
       },
 	  {
-	    "key":"{fontName}",
-		"rules" : [
-			"text"
-		]
-	  },
-	  {
-        "key":"{prefabName}",
-        "rules": [
-          "sufix(_Prefab"
-        ]
-      },
-	  {
         "key":"{usage}",
         "rules": [
           "sufix(_"
         ]
       },
 	  {
-	    "key":"{modelName}",
-		"rules" : [
-			"text"
-		]
-	  },
-	  {
-	    "key":"{textureName}",
-		"rules" : [
-			"text"
-		]
-	  },
-	  {
-	    "key":"{controllerName}",
-		"rules" : [
-			"text"
-		]
-	  },
-	  {
-	    "key":"{scriptName}",
-		"rules" : [
-			"text"
-		]
-	  },
-	  {
 	    "key":"{sceneName}",
 		"rules" : [
 			"sufix(Scene"
-		]
-	  },
-	  {
-	    "key":"{shaderName}",
-		"rules" : [
-			"text"
-		]
-	  },
-	  {
-	    "key":"{materialName}",
-		"rules" : [
-			"text"
 		]
 	  }
     ],

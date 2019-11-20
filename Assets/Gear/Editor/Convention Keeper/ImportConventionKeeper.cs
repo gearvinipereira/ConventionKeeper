@@ -22,7 +22,7 @@ namespace Gear.Tools.ConventionKeeper
                     //Process all imported assets
                     foreach (string importedAsset in importedAssets)
                     {
-                        FileConventionState conventionState = ConventionKeeper.CheckImportFileConvention(importedAsset);
+                        ConventionKeeper.CheckImportFileConvention(importedAsset);
                     }
 
                     //Process all moved assets
