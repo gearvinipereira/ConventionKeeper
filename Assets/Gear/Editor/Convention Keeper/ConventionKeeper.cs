@@ -659,6 +659,39 @@ namespace Gear.Tools.ConventionKeeper
             return FileConventionState.WrongFileName;
         }
 
+        public static List<string> GetAllTypesOfPath(string path)
+        {
+            List<string> typeList = new List<string>();
+
+            int pathFolderNumber = path.Count(x => x == '/');
+
+            string lastPath = path;
+
+            for (int i = 0; i < pathFolderNumber; i++)
+            {
+                JSONObject pathObject = config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == lastPath);
+
+                if (pathObject != null)
+                {
+                    foreach (JSONObject type in pathObject["fileTypesAllowed"].list)
+                    {
+                        if (!typeList.Contains(type.str))
+                        {
+                            typeList.Add(type.str);
+                        }
+                    }
+                }
+
+                string newLAstPath = Path.GetDirectoryName(lastPath);
+
+                newLAstPath = newLAstPath.Replace("\\", "/");
+
+                lastPath = newLAstPath;
+            }
+
+            return typeList;
+        }
+
         /// <summary>
         /// Checks if the file follows the convention
         /// </summary>
@@ -668,26 +701,32 @@ namespace Gear.Tools.ConventionKeeper
         {
             FileConventionState result = FileConventionState.NotValid;
 
-            JSONObject pathObject = config["folderStructure"]["check"]["folders"].list.Find(x => x["path"].str == file.folderAssetsPath);
+            //We run through all folders until the root, collecting possible valid file types. If a parent accept, the children should too.
+            List<string> allowedFileTypesList = GetAllTypesOfPath(file.folderAssetsPath);
 
-            if (pathObject == null)
+            if (allowedFileTypesList.Count == 0)
             {
                 return result;
             }
 
-            if (pathObject["fileTypesAllowed"].list.Count > 0)
+            if (allowedFileTypesList.Count > 0)
             {
-                List<JSONObject> allowedFileTypes = new List<JSONObject>(pathObject["fileTypesAllowed"].list);
-
-                JSONObject tmp = allowedFileTypes.Find(x => x.str == file.type);
+                string tmp = allowedFileTypesList.Find(x => x == file.type);
 
                 bool isAllowedFileType = (tmp != null) ? true : false;
 
-                if (config["folderStructure"]["ignore"]["fileTypes"].list.Find(x => x.str == file.type) != null)
+                if (!isAllowedFileType)
                 {
-                    result = FileConventionState.Ignored;
+                    if (config["folderStructure"]["ignore"]["fileTypes"].list.Find(x => x.str == file.type) != null)
+                    {
+                        result = FileConventionState.Ignored;
+                    }
+                    else
+                    {
+                        result = FileConventionState.NotValid;
+                    }
                 }
-                else if (isAllowedFileType)
+                else
                 {
                     JSONObject conventionObject = GetNameConventionObject(file.type);
                     if (!conventionObject.IsNull)
@@ -707,10 +746,6 @@ namespace Gear.Tools.ConventionKeeper
 
                         result = FileConventionState.NotValid;
                     }
-                }
-                else
-                {
-                    result = FileConventionState.NotValid;
                 }
             }
             else
