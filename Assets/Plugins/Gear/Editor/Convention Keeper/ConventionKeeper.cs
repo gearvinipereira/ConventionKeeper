@@ -105,12 +105,12 @@ namespace Gear.Tools.ConventionKeeper
         /// <summary>
         /// Holds the path to the base configuration JSON
         /// </summary>
-        private const string baseConfigFilePath = "Assets/Gear/Config Files/ConventionKeeperConfigBase.json";
+        private const string baseConfigFilePath = "Assets/Plugins/Gear/ConfigFiles/ConventionKeeperConfigBase.json";
 
         /// <summary>
         /// Holds the path to the current project configuration JSON
         /// </summary>
-        private static string projectConfigFilePath = "Assets/Gear/Config Files/ConventionKeeper_{NAME}_Config.asset";
+        private static string projectConfigFilePath = "Assets/Plugins/Gear/ConfigFiles/ConventionKeeper_{NAME}_Config.asset";
 
         #endregion
 
